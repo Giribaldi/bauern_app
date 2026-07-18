@@ -29,6 +29,10 @@ chrome-user-data
 .claude/*.local.*
 .claude/worktrees
 .turbo
+**/dist/
+**/.output/
+**/.tanstack/
+**/node_modules/
 
 packages/react-devtools-core/dist
 packages/react-devtools-extensions/chrome/build

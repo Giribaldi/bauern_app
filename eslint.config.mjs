@@ -6,7 +6,14 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/generated/**', '**/.next/**', '**/.output/**'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/generated/**',
+      '**/.next/**',
+      '**/.output/**',
+      '**/.tanstack/**',
+    ],
   },
   {
     languageOptions: {
