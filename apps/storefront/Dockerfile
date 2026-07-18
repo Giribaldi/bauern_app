@@ -13,4 +13,5 @@ RUN pnpm deploy --legacy --filter storefront --prod /prod/storefront
 FROM base AS runner
 WORKDIR /app
 COPY --from=builder /prod/storefront ./
+COPY --from=builder /app/packages/typescript-config ./node_modules/@local-market/typescript-config
 CMD ["npm", "start"]

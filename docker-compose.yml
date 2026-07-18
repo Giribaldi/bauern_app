@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U local_market"]
+      test: ["CMD-SHELL", "pg_isready -U local_market -d local_market"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,17 +27,38 @@ services:
       dockerfile: apps/api/Dockerfile
     ports:
       - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://local_market:password@postgres:5432/local_market
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/health').then(response => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   worker:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
+    command: ["sh", "-c", "node dist/index.js && exec tail -f /dev/null"]
+    environment:
+      DATABASE_URL: postgresql://local_market:password@postgres:5432/local_market
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   storefront:
     build:
@@ -46,16 +67,48 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - PORT=3000
+      PORT: "3000"
+      API_URL: http://api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/').then(response => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   admin:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
     ports:
-      - "3002:3000"
+      - "3002:3001"
     environment:
-      - PORT=3000
+      PORT: "3001"
+      API_URL: http://api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/').then(response => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
 volumes:
   postgres_data:
