@@ -50,22 +50,22 @@ local-market/
 
 ## Choix techniques validés
 
-| Domaine | Choix |
-|---|---|
-| Organisation | Monorepo pnpm + Turborepo |
-| Runtime | Node.js 24.18.0 |
-| Gestionnaire de paquets | pnpm 10.30.3 via Corepack |
-| Langage | TypeScript 7.0.2 pour les builds et typechecks |
-| API | Fastify |
-| Web public | TanStack Start |
-| Back-office | TanStack Start |
-| Mobile | Expo + React Native |
-| Build web | Vite 7.3.6 |
-| UI web | React 18.3.1 |
-| Tests | Vitest |
-| Conteneurs | Docker + Docker Compose |
-| Base locale | PostgreSQL 15 + PostGIS 3.3 |
-| E-mails locaux | Mailpit |
+| Domaine                 | Choix                                          |
+| ----------------------- | ---------------------------------------------- |
+| Organisation            | Monorepo pnpm + Turborepo                      |
+| Runtime                 | Node.js 24.18.0                                |
+| Gestionnaire de paquets | pnpm 10.30.3 via Corepack                      |
+| Langage                 | TypeScript 7.0.2 pour les builds et typechecks |
+| API                     | Fastify                                        |
+| Web public              | TanStack Start                                 |
+| Back-office             | TanStack Start                                 |
+| Mobile                  | Expo + React Native                            |
+| Build web               | Vite 7.3.6                                     |
+| UI web                  | React 18.3.1                                   |
+| Tests                   | Vitest                                         |
+| Conteneurs              | Docker + Docker Compose                        |
+| Base locale             | PostgreSQL 15 + PostGIS 3.3                    |
+| E-mails locaux          | Mailpit                                        |
 
 ## Services Docker
 
@@ -82,14 +82,14 @@ admin
 
 Ports de développement :
 
-| Service | Port |
-|---|---:|
-| API | 3000 |
-| Storefront | 3001 |
-| Admin | 3002 |
-| PostgreSQL | 5432 |
+| Service      | Port |
+| ------------ | ---: |
+| API          | 3000 |
+| Storefront   | 3001 |
+| Admin        | 3002 |
+| PostgreSQL   | 5432 |
 | Mailpit SMTP | 1025 |
-| Mailpit Web | 8025 |
+| Mailpit Web  | 8025 |
 
 L'application mobile Expo n'est pas exécutée comme service Docker de production.
 

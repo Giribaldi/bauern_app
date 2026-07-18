@@ -58,6 +58,7 @@ Le projet est un monorepo pnpm et Turborepo.
 ### Packages
 
 - `packages/api-client` : client HTTP TypeScript partagé ;
+- `packages/eslint-runtime` : environnement ESLint isolé avec sa couche de compatibilité TypeScript ;
 - `packages/shared` : code indépendant des plateformes ;
 - `packages/typescript-config` : configurations TypeScript partagées.
 
@@ -245,6 +246,10 @@ Le résultat attendu est :
 ```text
 Version 7.0.2
 ```
+
+TypeScript 7.0.2 est l’unique compilateur des applications et packages. Tous les builds et typechecks l’utilisent.
+
+TypeScript 6.0.3 est uniquement autorisé dans `packages/eslint-runtime` comme couche de compatibilité temporaire pour `typescript-eslint`. Il ne doit jamais être utilisé pour les builds ou typechecks.
 
 Pour une modification Docker :
 
