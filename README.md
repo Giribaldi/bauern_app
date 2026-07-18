@@ -3,6 +3,7 @@
 Marketplace locale de fruits et légumes permettant aux agriculteurs de publier leurs produits et aux clients de commander sans créer de compte, avec retrait direct à la ferme.
 
 ## Prérequis
+
 - Node.js >= 22
 - pnpm >= 9
 - Docker & Docker Compose
@@ -17,6 +18,7 @@ pnpm install
 ## Configuration
 
 Copiez le fichier d'environnement et ajustez-le si nécessaire :
+
 ```bash
 cp .env.example .env
 ```
@@ -48,7 +50,9 @@ docker compose up --build
    ```
 
 ### Lancement de l'application mobile
+
 Depuis la racine du projet, lancez :
+
 ```bash
 pnpm --filter mobile start
 ```
@@ -56,6 +60,7 @@ pnpm --filter mobile start
 ## Migrations de la Base de Données
 
 Les migrations se trouvent dans `apps/api/src/db/migrations`.
+
 - `pnpm db:migrate` : Exécute les migrations.
 - `pnpm db:rollback` : Annule la dernière migration.
 - `pnpm db:seed` : Ajoute les données de test.
@@ -63,6 +68,7 @@ Les migrations se trouvent dans `apps/api/src/db/migrations`.
 ## Génération du client API
 
 Pour générer ou mettre à jour le client TS à partir de Fastify :
+
 ```bash
 # 1. Générer le fichier openapi.json depuis l'API
 pnpm api:openapi
@@ -81,10 +87,12 @@ pnpm lint
 ## Comptes de Démonstration
 
 (Sera défini après le seed)
+
 - Administrateur: admin@localmarket.test / password
 - Agriculteur: farmer@localmarket.test / password
 
 ## Architecture
+
 - **API** : Fastify (Port 3000)
 - **Storefront** : TanStack Start (Port 3001)
 - **Admin** : TanStack Start (Port 3002)

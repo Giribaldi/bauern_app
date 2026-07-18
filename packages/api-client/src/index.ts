@@ -1,1 +1,1 @@
-export const Client = true;
+export const Client = true
