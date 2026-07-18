@@ -1,0 +1,14 @@
+{
+  "name": "@local-market/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "@local-market/typescript-config": "workspace:*"
+  }
+}

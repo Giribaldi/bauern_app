@@ -1,0 +1,19 @@
+{
+  "name": "@local-market/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "generate": "openapi-typescript ../../apps/api/openapi.json -o src/generated/schema.ts",
+    "check-generated": "git diff --exit-code src/generated/schema.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.9.3"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^6.7.5",
+    "typescript": "7.0.2",
+    "@local-market/typescript-config": "workspace:*"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "local-market",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.30.3",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml}\"",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:rollback": "pnpm --filter api db:rollback",
+    "db:status": "pnpm --filter api db:status",
+    "db:seed": "pnpm --filter api db:seed",
+    "api:openapi": "pnpm --filter api generate-openapi",
+    "api:client:generate": "pnpm --filter api-client generate",
+    "api:client:check": "pnpm --filter api-client check-generated"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.1.1",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
+    "prettier": "^3.9.5",
+    "turbo": "^2.10.5",
+    "typescript": "6.0.3",
+    "typescript-7": "npm:typescript@7.0.2",
+    "typescript-eslint": "^8.64.0",
+    "vitest": "^4.1.10"
+  }
+}
