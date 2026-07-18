@@ -2,7 +2,7 @@
   "name": "local-market",
   "private": true,
   "engines": {
-    "node": ">=22.0.0",
+    "node": "24.18.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@10.30.3",
