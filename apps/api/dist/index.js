@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { fileURLToPath } from 'node:url';
 export const buildApp = () => {
     const app = Fastify();
     app.get('/health', async () => {
@@ -6,7 +7,7 @@ export const buildApp = () => {
     });
     return app;
 };
-export const startApp = async () => {
+export const startServer = async () => {
     const app = buildApp();
     try {
         await app.listen({ port: 3000, host: '0.0.0.0' });
@@ -17,7 +18,7 @@ export const startApp = async () => {
         process.exit(1);
     }
 };
-if (require.main === module) {
-    startApp();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    void startServer();
 }
 //# sourceMappingURL=index.js.map

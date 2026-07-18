@@ -1,7 +1,8 @@
-/// <reference types="node" />
-export const worker = true;
-console.log("Worker starting...");
-setInterval(() => {
-    console.log("Worker heartbeat");
-}, 60000);
+import { fileURLToPath } from 'node:url';
+export const startWorker = () => {
+    console.log('Worker started');
+};
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    startWorker();
+}
 //# sourceMappingURL=index.js.map
