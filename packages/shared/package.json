@@ -4,7 +4,7 @@
   "private": true,
   "main": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm --workspace-root exec tsc --noEmit --project packages/shared/tsconfig.json",
     "lint": "eslint ."
   },
   "devDependencies": {
