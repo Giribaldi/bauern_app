@@ -633,3 +633,36 @@ Limites
 Ne jamais présenter le travail d’Antigravity comme ayant été directement réalisé ou validé par Codex.
 
 Ne jamais inclure les raisonnements internes, chaînes de pensée ou contenus de type « Thought Process » d’un agent.
+
+### Restrictions du mode antigravity_analyze
+
+Lors d’un appel à `antigravity_analyze`, Antigravity doit effectuer uniquement
+une inspection statique en lecture seule.
+
+Sauf demande utilisateur explicite, il ne doit pas exécuter :
+
+- les tests ;
+- le lint ;
+- le typecheck ;
+- les builds ;
+- l’installation de dépendances ;
+- Docker ;
+- les migrations ;
+- les scripts de package.json.
+
+Les commandes autorisées doivent être limitées à l’inspection, notamment :
+
+```bash
+git status --short
+git log
+git show
+git ls-files
+find
+ls
+cat
+sed
+head
+tail
+rg
+grep
+```
