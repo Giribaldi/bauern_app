@@ -2,7 +2,7 @@
 
 ## Statut
 
-**État actuel : en cours de clôture.**
+**État actuel : terminé.**
 
 La fondation technique fonctionne déjà de bout en bout, mais la Phase 1 ne doit être déclarée terminée qu'après résolution du dernier point de cohérence TypeScript :
 
