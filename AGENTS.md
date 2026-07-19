@@ -402,3 +402,234 @@ En cas d’échec, indiquer clairement :
 - l’erreur exacte ;
 - les étapes non exécutées ;
 - la correction minimale nécessaire.
+
+## Orchestration des agents
+
+### Rôles
+
+Codex est l’unique maître d’orchestration du projet.
+
+Codex reste responsable :
+
+- de l’analyse initiale ;
+- du découpage de la tâche ;
+- des décisions d’architecture ;
+- du choix des travaux à déléguer ;
+- de la revue des résultats ;
+- de l’intégration finale ;
+- de l’exécution des validations ;
+- du rapport final.
+
+Antigravity est uniquement un sous-agent spécialisé appelé par Codex au moyen des outils MCP disponibles.
+
+Antigravity ne doit jamais devenir l’orchestrateur principal et ne doit jamais déléguer à un autre agent.
+
+### Conditions préalables à une délégation
+
+Avant toute délégation à Antigravity, Codex doit :
+
+1. lire la demande utilisateur et le présent fichier ;
+2. déterminer un objectif unique et borné ;
+3. identifier explicitement les fichiers ou dossiers autorisés ;
+4. vérifier l’état du dépôt avec :
+
+```bash
+git status --short
+git diff --check
+git diff --stat
+git diff
+```
+
+5. vérifier que le dépôt principal est dans un état compatible avec la création d’un worktree isolé ;
+6. ne transmettre aucun secret, jeton, fichier `.env`, credential ou donnée sensible.
+
+Un dépôt principal contenant des modifications non enregistrées ne doit pas être délégué à Antigravity, sauf si Codex démontre explicitement que ces modifications ne sont pas nécessaires à la tâche et qu’elles ne risquent pas de fausser le résultat.
+
+### Cas autorisés de délégation
+
+Utiliser `antigravity_analyze` pour :
+
+- obtenir un second avis ;
+- analyser une partie indépendante du dépôt ;
+- rechercher la cause possible d’un bug ;
+- effectuer une revue de code ;
+- comparer plusieurs solutions techniques ;
+- identifier des risques ou des tests manquants ;
+- analyser une tâche sans modifier les fichiers.
+
+Utiliser `antigravity_propose_patch` uniquement lorsque :
+
+- la tâche est clairement définie ;
+- le périmètre des fichiers est explicitement limité ;
+- les modifications peuvent être réalisées dans un worktree Git isolé ;
+- Codex prévoit de lire la totalité du patch ;
+- Codex prévoit de relancer lui-même les validations ;
+- aucune opération sensible ou irréversible n’est nécessaire.
+
+Ne pas déléguer à Antigravity :
+
+- une décision d’architecture structurante sans revue Codex ;
+- une migration de base de données non demandée ;
+- une modification de schéma ou de contrat API hors phase autorisée ;
+- une mise à jour générale des dépendances ;
+- un déploiement ;
+- une publication ;
+- une fusion Git ;
+- une opération nécessitant des secrets ;
+- une tâche dont le périmètre ne peut pas être clairement borné.
+
+### Isolation obligatoire
+
+Toute tâche Antigravity susceptible de modifier des fichiers doit être exécutée dans un worktree Git isolé.
+
+Antigravity ne doit jamais modifier directement le worktree principal.
+
+Antigravity ne doit jamais :
+
+- effectuer un `git push` ;
+- fusionner une branche ;
+- rebaser une branche partagée ;
+- modifier la branche principale ;
+- créer ou modifier un tag ;
+- publier un paquet ;
+- déployer une application ;
+- modifier une configuration distante ;
+- accéder volontairement à des fichiers situés hors du worktree assigné ;
+- utiliser un mode de contournement global des permissions sans demande explicite de l’utilisateur.
+
+Les worktrees créés pour Antigravity sont temporaires et doivent être supprimés après revue, sauf besoin explicite de conservation pour investigation.
+
+### Périmètre des fichiers
+
+Lors d’un appel à `antigravity_propose_patch`, Codex doit fournir une liste explicite des chemins autorisés.
+
+Antigravity ne doit modifier aucun fichier situé hors de cette liste.
+
+Si le patch contient une modification hors périmètre :
+
+1. Codex doit la signaler ;
+2. Codex doit la rejeter ;
+3. Codex ne doit pas intégrer le patch complet ;
+4. Codex doit déterminer si le reste du résultat reste exploitable.
+
+Les fichiers suivants sont interdits par défaut lors d’une délégation, sauf demande utilisateur explicite :
+
+```text
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+**/credentials*
+**/secrets*
+.git/**
+node_modules/**
+dist/**
+.output/**
+.tanstack/**
+```
+
+### Revue obligatoire du résultat
+
+Un résultat produit par Antigravity n’est jamais considéré comme validé.
+
+Après une délégation, Codex doit :
+
+1. lire le résultat structuré de l’exécution ;
+2. lire la totalité du patch avec `antigravity_read_patch` lorsque nécessaire ;
+3. inspecter tous les fichiers modifiés ;
+4. vérifier le respect du périmètre ;
+5. rechercher les modifications inutiles ou opportunistes ;
+6. vérifier l’absence de secret ou de donnée sensible ;
+7. vérifier les changements de dépendances et de lockfile ;
+8. vérifier la conformité avec l’architecture et la phase actuelle ;
+9. rejeter toute modification non justifiée.
+
+Codex ne doit jamais annoncer qu’un résultat Antigravity est correct uniquement parce que l’agent affirme avoir réussi.
+
+### Intégration
+
+Codex reste responsable de l’intégration dans le worktree principal.
+
+Par défaut, Codex doit préférer :
+
+- réimplémenter les changements acceptés ;
+- ou appliquer uniquement les parties explicitement revues du patch.
+
+Codex ne doit pas fusionner automatiquement la branche temporaire complète.
+
+Avant toute intégration, Codex doit présenter les risques ou anomalies identifiés lorsque ceux-ci sont significatifs.
+
+### Validations après intégration
+
+Les validations exécutées par Antigravity sont informatives mais ne remplacent jamais celles de Codex.
+
+Après intégration dans le worktree principal, Codex doit exécuter lui-même les commandes adaptées à la tâche.
+
+Selon le périmètre, commencer par les validations ciblées :
+
+```bash
+pnpm --filter <workspace> typecheck
+pnpm --filter <workspace> test
+pnpm --filter <workspace> build
+```
+
+Puis exécuter les contrôles globaux nécessaires :
+
+```bash
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Codex doit également exécuter :
+
+```bash
+git diff --check
+git diff --stat
+git diff
+git status --short
+```
+
+Une commande exécutée uniquement par Antigravity ne doit pas être présentée comme une validation effectuée par Codex.
+
+### Nettoyage
+
+Après acceptation ou rejet du travail délégué, Codex doit utiliser `antigravity_cleanup` pour supprimer :
+
+- le worktree temporaire ;
+- la branche temporaire, lorsqu’elle n’est plus nécessaire.
+
+Le nettoyage ne doit être effectué qu’après :
+
+- lecture complète du résultat ;
+- conservation éventuelle du patch utile ;
+- intégration ou rejet explicite des modifications.
+
+Les logs et artefacts d’exécution peuvent être conservés pour audit ou diagnostic.
+
+### Rapport final
+
+Le rapport final doit distinguer clairement :
+
+```text
+Travail réalisé par Codex
+Travail délégué à Antigravity
+Résultat de la revue Codex
+Modifications retenues
+Modifications rejetées
+Commandes exécutées par Codex
+Commandes rapportées par Antigravity
+Tests exécutés par Codex
+Résultats
+Avertissements
+Limites
+État Git final
+```
+
+Ne jamais présenter le travail d’Antigravity comme ayant été directement réalisé ou validé par Codex.
+
+Ne jamais inclure les raisonnements internes, chaînes de pensée ou contenus de type « Thought Process » d’un agent.
