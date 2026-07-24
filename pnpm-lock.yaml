@@ -149,6 +149,9 @@ importers:
       '@babel/core':
         specifier: ^7.20.0
         version: 7.29.7
+      '@local-market/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
       '@types/react':
         specifier: ~18.2.45
         version: 18.2.79
