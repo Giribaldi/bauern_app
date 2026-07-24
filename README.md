@@ -35,6 +35,28 @@ La version pnpm attendue est définie dans le champ `packageManager` du `package
 
 ## Installation
 
+### Installation automatisée sur Ubuntu ou Debian
+
+Le script d’installation configure Docker avec Docker Compose, Node.js et pnpm
+aux versions attendues par le dépôt. Il installe ensuite les dépendances depuis
+le lockfile et crée `.env` à partir de `.env.example` s’il n’existe pas :
+
+```bash
+./scripts/setup-dev-environment.sh
+```
+
+Le script demande le mot de passe `sudo` pour les paquets système. Il peut être
+relancé sans remplacer un fichier `.env` existant. Si l’utilisateur vient
+d’être ajouté au groupe `docker`, une déconnexion puis une reconnexion est
+nécessaire. Sinon, recharger le profil du terminal avant de lancer le projet :
+
+```bash
+source ~/.profile
+docker compose up --build
+```
+
+### Installation manuelle
+
 Activer pnpm avec Corepack :
 
 ```bash
