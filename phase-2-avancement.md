@@ -55,6 +55,67 @@ Principes de gouvernance :
 - Aucun fichier modifié.
 - État Git final propre.
 
+### 2.1.2 — Créer et tester un parseur pur de DATABASE_URL pour l’API
+
+- **Statut** : VALIDÉE
+- Fichiers créés :
+  - `apps/api/src/config/env.ts`
+  - `apps/api/src/config/env.test.ts`
+- Contrat validé :
+  - Parseur pur `parseDatabaseEnvironment(environment)` sans aucune lecture directe de `process.env`.
+  - Acceptation des protocoles `postgres:` et `postgresql:`.
+  - Refus des valeurs absentes, vides, composées uniquement d'espaces, URL syntaxiquement invalides ou utilisant d'autres protocoles.
+  - Messages d'erreur explicites de type `EnvironmentValidationError` sans divulgation de l'URL sensible complète.
+  - Suppression des espaces extérieurs de `databaseUrl`.
+- Validations ciblées et globales réussies :
+  - Validation ciblée : prettier, lint, typecheck, test, build sur `@local-market/api`.
+  - Validation globale : `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- Version TypeScript observée : `Version 7.0.2`.
+- `dotenv`, `API_PORT`, Fastify et Kysely ne sont toujours pas intégrés.
+
+### 2.1.3 — Créer et tester le parseur pur de API_PORT
+
+- **Statut** : NON VALIDÉE
+- Motif du rejet : La commande de lint ciblée `pnpm --filter @local-market/api lint` a échoué avec `sh: 1: eslint: not found`, mais les validations ont été poursuivies au lieu de stopper immédiatement selon le protocole. Le rejet concerne la procédure de validation et non un défaut de code identifié dans l'implémentation.
+- Fichiers modifiés :
+  - `apps/api/src/config/env.ts`
+  - `apps/api/src/config/env.test.ts`
+- Implémentation réalisée :
+  - Parseur pur `parseApiPort(environment)` sans aucune lecture directe de `process.env`.
+  - Exportation de l'interface `ApiPortEnvironment` (`apiPort: number`).
+  - Refus des valeurs absentes, vides, composées uniquement d'espaces, non numériques, partiellement numériques, décimales, notations exponentielles, signes explicites, zéro, valeurs négatives ou supérieures à 65535.
+  - Acceptation des bornes 1 et 65535 ainsi que de la valeur habituelle 3000.
+  - Suppression des espaces extérieurs avant conversion.
+  - Messages d'erreur explicites de type `EnvironmentValidationError` sans divulgation de la valeur brute reçue.
+  - Maintien sans régression des tests de `DATABASE_URL` (9 tests) et ajout des tests Vitest pour `API_PORT` (17 tests, total 26 tests dans env.test.ts).
+
+### 2.1.3a — Corriger la traçabilité et revalider le parseur API_PORT avec l’environnement ESLint isolé
+
+- **Statut** : VALIDÉE
+- Aucune modification de code ni de test effectuée pendant 2.1.3a (`env.ts` et `env.test.ts` inchangés).
+- Fichiers modifiés :
+  - `phase-2-avancement.md`
+- Validation ciblée corrigée exécutée :
+  - Prettier check : `pnpm exec prettier --check apps/api/src/config/env.ts apps/api/src/config/env.test.ts` (réussi).
+  - ESLint ciblée via workspace isolé : `pnpm --filter @local-market/eslint-runtime exec eslint ../../apps/api/src/config/env.ts ../../apps/api/src/config/env.test.ts` (0 erreur, 0 avertissement).
+  - Typecheck ciblée : `pnpm --filter @local-market/api typecheck` (réussi).
+  - Test Vitest ciblé source : `pnpm --filter @local-market/api exec vitest run src/config/env.test.ts` (1 test file, 26 tests passés : 9 `parseDatabaseEnvironment`, 17 `parseApiPort`).
+  - Test Vitest workspace api : `pnpm --filter @local-market/api test` (4 test files, 54 tests passés dont 26 sous src, 26 compilés sous dist, 1 src index test, 1 dist index test).
+  - Build ciblé : `pnpm --filter @local-market/api build` (réussi).
+- Validations globales réussies :
+  - `pnpm exec tsc --version` (Version 7.0.2).
+  - `pnpm format:check` (réussi).
+  - `pnpm lint` (réussi).
+  - `pnpm typecheck` (réussi).
+  - `pnpm test` (réussi).
+  - `pnpm build` (réussi).
+- Avertissements réellement observés :
+  - Avertissement Prettier pour `prettier.config.js` sans `"type": "module"`.
+  - Avertissement pnpm pour les scripts de build ignorés (`esbuild@0.28.1`).
+  - Avertissement Turborepo update (v2.10.5 ≫ v2.10.7).
+- Version TypeScript observée : `Version 7.0.2`.
+- `process.env`, `dotenv`, Fastify et Kysely ne sont toujours pas intégrés.
+
 ## Constats et décisions établis
 
 ### Faits et constats validés
@@ -81,13 +142,9 @@ Principes de gouvernance :
 
 ## Micro-tâche suivante immédiate
 
-### 2.1.2 — Créer et tester un parseur pur de DATABASE_URL pour l’API.
+### 2.1.4 — Composer et tester le parseur pur de configuration API regroupant DATABASE_URL et API_PORT.
 
-- **Statut** : À FAIRE
-- Prompt déjà préparé.
-- Aucune exécution ni modification reçue.
-- Fichiers envisagés : `apps/api/src/config/env.ts` et `apps/api/src/config/env.test.ts`.
-- Cette entrée ne doit pas être marquée VALIDÉE avant réception et analyse du rapport Gemini.
+Statut : À FAIRE
 
 ## Blocages et avertissements
 
