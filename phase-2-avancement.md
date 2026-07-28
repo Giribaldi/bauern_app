@@ -179,6 +179,38 @@ Les futurs prompts destinés à Gemini doivent rester complets mais compacts afi
   - Doublons de tests compilés observés sous `dist` dans Vitest (distingues des 39 tests source).
 - `process.env`, `dotenv`, Fastify et Kysely ne sont toujours pas intégrés.
 
+### 2.1.5 — Créer et tester l’adaptateur de chargement de la configuration API depuis process.env
+
+- **Statut** : VALIDÉE
+- Fichiers modifiés :
+  - `apps/api/src/config/env.ts`
+  - `apps/api/src/config/env.test.ts`
+  - `phase-2-avancement.md`
+- Implémentation réalisée :
+  - Exportation de `loadApiEnvironment(): ApiEnvironment`.
+  - Adaptateur minimal qui appelle `parseApiEnvironment(process.env)` et retourne son résultat.
+  - Conservation de toutes les validations, normalisations et erreurs existantes.
+  - Lecture dynamique de l'état courant de `process.env` à chaque appel sans cache.
+  - Aucun chargement de `dotenv`.
+  - Aucune journalisation des variables ni de leurs valeurs.
+  - Aucune modification de `process.env`.
+  - Non-intégration à Fastify ou au démarrage de l'API.
+  - Maintien sans régression des 39 tests source existants et ajout de 5 tests Vitest ciblés (total 44 tests source dans `env.test.ts`).
+- Validations ciblées et globales réussies :
+  - Prettier check ciblé sur `env.ts` et `env.test.ts` (réussi après formatage).
+  - ESLint ciblé via l'environnement isolé `@local-market/eslint-runtime` (0 erreur, 0 avertissement).
+  - Typecheck ciblé sur `@local-market/api` (réussi).
+  - Vitest sur fichier source ciblé `src/config/env.test.ts` : 1 fichier de test, 44 tests passés (9 `parseDatabaseEnvironment`, 17 `parseApiPort`, 13 `parseApiEnvironment`, 5 `loadApiEnvironment`).
+  - Vitest sur workspace `@local-market/api` : 4 fichiers de test, 85 tests passés (44 source `src/config/env.test.ts`, 39 compilés `dist/config/env.test.js`, 1 source `src/index.test.ts`, 1 compilé `dist/index.test.js`).
+  - Build ciblé `@local-market/api` (réussi).
+  - Passage global final : `tsc --version` (Version 7.0.2), `format:check`, `lint`, `typecheck`, `test`, `build` tous réussis.
+- Contrôles d'artefacts exécutés :
+  - `git ls-files ':(glob)**/dist/**'` : aucun artefact suivi.
+  - `git ls-files ':(glob)**/.output/**'` : aucun artefact suivi.
+  - `git ls-files ':(glob)**/.tanstack/**'` : aucun artefact suivi.
+- Version TypeScript observée : `Version 7.0.2`.
+- `dotenv`, Fastify et Kysely ne sont toujours pas intégrés.
+
 ## Constats et décisions établis
 
 ### Faits et constats validés
@@ -205,9 +237,7 @@ Les futurs prompts destinés à Gemini doivent rester complets mais compacts afi
 
 ## Micro-tâche suivante immédiate
 
-### 2.1.5 — Créer et tester l’adaptateur de chargement de la configuration API depuis process.env.
-
-Statut : À FAIRE
+La détermination de la micro-tâche suivante attend l'analyse du présent rapport.
 
 ## Blocages et avertissements
 

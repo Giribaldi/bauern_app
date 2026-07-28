@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   EnvironmentValidationError,
+  loadApiEnvironment,
   parseApiEnvironment,
   parseApiPort,
   parseDatabaseEnvironment,
@@ -421,6 +422,99 @@ describe('parseApiEnvironment', () => {
     expect(result).toEqual({
       databaseUrl: 'postgres://isolated:secret@127.0.0.1:5432/isolated_db',
       apiPort: 8080,
+    })
+  })
+})
+
+describe('loadApiEnvironment', () => {
+  let originalDatabaseUrl: string | undefined
+  let originalApiPort: string | undefined
+
+  beforeEach(() => {
+    originalDatabaseUrl = process.env.DATABASE_URL
+    originalApiPort = process.env.API_PORT
+  })
+
+  afterEach(() => {
+    if (originalDatabaseUrl === undefined) {
+      delete process.env.DATABASE_URL
+    } else {
+      process.env.DATABASE_URL = originalDatabaseUrl
+    }
+
+    if (originalApiPort === undefined) {
+      delete process.env.API_PORT
+    } else {
+      process.env.API_PORT = originalApiPort
+    }
+  })
+
+  it('loads valid environment from process.env and returns exact shape', () => {
+    process.env.DATABASE_URL = 'postgres://fakeuser:fakepass@localhost:5432/fakedb'
+    process.env.API_PORT = '3000'
+
+    const result = loadApiEnvironment()
+    expect(result).toEqual({
+      databaseUrl: 'postgres://fakeuser:fakepass@localhost:5432/fakedb',
+      apiPort: 3000,
+    })
+    expect(Object.keys(result)).toEqual(['databaseUrl', 'apiPort'])
+  })
+
+  it('normalizes exterior spaces using existing parsers', () => {
+    process.env.DATABASE_URL = '  postgres://fakeuser:fakepass@localhost:5432/fakedb  '
+    process.env.API_PORT = '  8080  '
+
+    const result = loadApiEnvironment()
+    expect(result).toEqual({
+      databaseUrl: 'postgres://fakeuser:fakepass@localhost:5432/fakedb',
+      apiPort: 8080,
+    })
+  })
+
+  it('propagates DATABASE_URL validation error', () => {
+    delete process.env.DATABASE_URL
+    process.env.API_PORT = '3000'
+
+    expect(() => loadApiEnvironment()).toThrow(EnvironmentValidationError)
+    try {
+      loadApiEnvironment()
+    } catch (error) {
+      expect(error).toBeInstanceOf(EnvironmentValidationError)
+      expect((error as Error).message).toBe('DATABASE_URL variable is missing.')
+    }
+  })
+
+  it('propagates API_PORT validation error', () => {
+    process.env.DATABASE_URL = 'postgres://fakeuser:fakepass@localhost:5432/fakedb'
+    process.env.API_PORT = 'invalid_port'
+
+    expect(() => loadApiEnvironment()).toThrow(EnvironmentValidationError)
+    try {
+      loadApiEnvironment()
+    } catch (error) {
+      expect(error).toBeInstanceOf(EnvironmentValidationError)
+      expect((error as Error).message).toBe('API_PORT must be a valid integer format.')
+    }
+  })
+
+  it('reads new values on consecutive calls proving no caching', () => {
+    process.env.DATABASE_URL = 'postgres://fakeuser1:fakepass1@localhost:5432/fakedb1'
+    process.env.API_PORT = '3000'
+
+    const result1 = loadApiEnvironment()
+    expect(result1).toEqual({
+      databaseUrl: 'postgres://fakeuser1:fakepass1@localhost:5432/fakedb1',
+      apiPort: 3000,
+    })
+
+    process.env.DATABASE_URL = 'postgresql://fakeuser2:fakepass2@localhost:5432/fakedb2'
+    process.env.API_PORT = '4000'
+
+    const result2 = loadApiEnvironment()
+    expect(result2).toEqual({
+      databaseUrl: 'postgresql://fakeuser2:fakepass2@localhost:5432/fakedb2',
+      apiPort: 4000,
     })
   })
 })

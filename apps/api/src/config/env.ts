@@ -81,3 +81,7 @@ export const parseApiEnvironment = (environment: NodeJS.ProcessEnv): ApiEnvironm
     apiPort: apiPortEnv.apiPort,
   }
 }
+
+export const loadApiEnvironment = (): ApiEnvironment => {
+  return parseApiEnvironment(process.env)
+}
