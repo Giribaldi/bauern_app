@@ -35,7 +35,8 @@ Les futurs prompts destinés à Gemini doivent rester complets mais compacts afi
 - pnpm : 10.30.3.
 - TypeScript : 7.0.2.
 - Validations de Phase 1 déjà acquises, sans en refaire un audit détaillé.
-- Aucune migration, table métier, seed, connexion Kysely, route `/ready` ou route `/v1/farms` n'est encore implémentée.
+- La configuration d'environnement, la connexion Kysely, le runner de migrations et la migration des extensions PostgreSQL sont validés.
+- Aucune table métier, seed, route `/ready` ou route `/v1/farms` n'est encore implémentée.
 
 ## Légende des statuts
 
@@ -211,6 +212,53 @@ Les futurs prompts destinés à Gemini doivent rester complets mais compacts afi
 - Version TypeScript observée : `Version 7.0.2`.
 - `dotenv`, Fastify et Kysely ne sont toujours pas intégrés.
 
+### 2.2 — Connexion PostgreSQL avec Kysely
+
+- **Statut** : VALIDÉE
+- Connexion centralisée créée avec `Kysely`, `PostgresDialect` et un pool `pg`.
+- La configuration de connexion reste interne à l'API et ne journalise pas `DATABASE_URL`.
+- Le chargement de `.env` racine est limité aux commandes de base de données ; les variables déjà injectées restent prioritaires.
+- Une sonde `SELECT 1` vérifie explicitement la connexion.
+- Test d'intégration réussi contre PostgreSQL/PostGIS réel dans une base temporaire créée puis supprimée.
+
+### 2.3 — Runner de migrations Kysely
+
+- **Statut** : VALIDÉE
+- Commandes disponibles :
+  - `pnpm db:migration:create <name>` ;
+  - `pnpm db:migrate` ;
+  - `pnpm db:rollback` ;
+  - `pnpm db:status` ;
+  - `pnpm db:reset`.
+- Les noms de migration suivent la convention UTC `YYYY-MM-DDTHHmmss_description.ts`.
+- Les erreurs de migration sont normalisées sans afficher l'URL de connexion.
+- `db:reset` est refusé lorsque `NODE_ENV=production`.
+- Migration, statut, rollback et remigration réussis via les commandes racine.
+- `tsx` est une dépendance d'exécution de l'API et le package déployé fixe pnpm à `10.30.3`.
+- La commande documentée `docker compose run --rm api pnpm db:migrate` a réussi dans l'image API reconstruite.
+
+### 2.4 — Extensions PostgreSQL
+
+- **Statut** : VALIDÉE
+- Migration autonome créée :
+  - `apps/api/src/database/migrations/2026-07-28T000000_enable_postgresql_extensions.ts`.
+- La migration active `postgis` et `pgcrypto` avec `CREATE EXTENSION IF NOT EXISTS`.
+- Le rollback conserve volontairement les extensions potentiellement partagées tout en retirant l'enregistrement de migration.
+- Validation réelle sur base vide réussie :
+  - connexion ;
+  - migration ;
+  - présence de `postgis` et `pgcrypto` ;
+  - statut exécuté ;
+  - second passage idempotent ;
+  - rollback ;
+  - statut en attente ;
+  - conservation des extensions ;
+  - remigration.
+- Tests ciblés : 8 tests unitaires réussis et 1 test d'intégration PostgreSQL/PostGIS réussi.
+- Suite API sans drapeau d'intégration : 106 tests réussis et 2 tests ignorés, incluant les doublons compilés sous `dist`.
+- Validation globale réussie : formatage, lint, typecheck, tests et build.
+- TypeScript observé : `Version 7.0.2`.
+
 ## Constats et décisions établis
 
 ### Faits et constats validés
@@ -223,25 +271,27 @@ Les futurs prompts destinés à Gemini doivent rester complets mais compacts afi
 - La convention applicative observée est une URL de connexion unique `DATABASE_URL`.
 - Les formes `postgres:` et `postgresql:` sont présentes dans la configuration actuelle.
 - Le port et l'hôte Fastify sont actuellement codés en dur.
-- L'API ne lit encore aucune variable d'environnement.
+- L'API charge la configuration de base de données uniquement depuis les commandes dédiées ; le serveur Fastify n'intègre pas encore cette connexion.
 - `dotenv`, `kysely`, `pg` et `@types/pg` sont déjà déclarés dans le projet.
 - Les scripts `db:migrate`, `db:rollback`, `db:status` et `db:seed` sont déjà déclarés.
-- Aucune connexion PostgreSQL/Kysely n'est encore implémentée.
+- La connexion PostgreSQL/Kysely et les migrations des extensions sont implémentées et validées.
 
-### Décisions pour la prochaine implémentation (non encore créées)
+### Décisions pour la prochaine implémentation
 
-- Commencer par un parseur pur de `DATABASE_URL`.
-- Accepter les schémas `postgres:` et `postgresql:`.
-- Ne pas charger `dotenv` ni intégrer `process.env` pendant cette première implémentation.
-- Valider `API_PORT` dans une micro-tâche distincte.
+- La prochaine micro-tâche crée les tables utilisateurs et exploitations par migrations autonomes.
+- Elle ne doit pas encore introduire le catalogue, les offres, le stock, les routes HTTP ou l'interface.
 
 ## Micro-tâche suivante immédiate
 
-La détermination de la micro-tâche suivante attend l'analyse du présent rapport.
+### 2.5 — Créer les tables utilisateurs et exploitations
+
+- **Statut** : À FAIRE
+- Périmètre : `users`, `farms`, `farm_members` et `farm_locations`, avec contraintes et index spatial.
 
 ## Blocages et avertissements
 
 - Aucun blocage actuel.
+- Le plugin Docker Buildx est absent de l'hôte ; l'image API a été validée avec le builder Docker classique (`DOCKER_BUILDKIT=0`).
 - Le binaire `rg` n'était pas disponible dans le PATH standard lors du dernier audit et a été trouvé dans l'environnement VS Code.
 - Ne jamais inscrire de valeur provenant de `.env` ou d'une URL de connexion.
 

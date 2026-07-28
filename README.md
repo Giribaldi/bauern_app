@@ -240,17 +240,35 @@ pnpm build
 
 PostgreSQL et PostGIS sont disponibles dans l’environnement Docker.
 
-Les fonctionnalités suivantes seront ajoutées pendant la Phase 2 :
+La connexion Kysely, le runner de migrations et les extensions `postgis` et `pgcrypto` sont
+implémentés. Démarrer PostgreSQL :
 
-- connexion Kysely ;
-- migrations ;
-- rollback ;
-- statut des migrations ;
-- seed de développement ;
-- reset contrôlé de la base ;
-- recherche géographique des exploitations.
+```bash
+docker compose up -d postgres
+```
 
-Les commandes de base de données ne doivent être documentées ici qu’après leur implémentation et leur validation effectives.
+Commandes disponibles :
+
+```bash
+pnpm db:migration:create <nom_en_snake_case>
+pnpm db:migrate
+pnpm db:status
+pnpm db:rollback
+pnpm db:reset
+```
+
+`db:reset` est interdit lorsque `NODE_ENV=production`. Le rollback de la première migration
+conserve volontairement les extensions PostgreSQL, car elles peuvent être partagées par d’autres
+objets de la base.
+
+Depuis l’image API :
+
+```bash
+docker compose run --rm api pnpm db:migrate
+```
+
+Le seed, les tables métier et la recherche géographique seront ajoutés dans les parties suivantes
+de la Phase 2.
 
 ## OpenAPI et client TypeScript
 

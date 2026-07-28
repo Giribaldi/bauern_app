@@ -2,6 +2,7 @@
   "name": "@local-market/api",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.30.3",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
@@ -9,10 +10,12 @@
     "test": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "tsx src/db/migrate.ts",
-    "db:rollback": "tsx src/db/rollback.ts",
-    "db:status": "tsx src/db/status.ts",
-    "db:seed": "tsx src/db/seed.ts",
+    "db:migration:create": "tsx src/database/create-migration.ts",
+    "db:migrate": "tsx src/database/migrate.ts",
+    "db:rollback": "tsx src/database/rollback.ts",
+    "db:status": "tsx src/database/migration-status.ts",
+    "db:seed": "tsx src/database/seed.ts",
+    "db:reset": "tsx src/database/reset.ts",
     "generate-openapi": "tsx src/scripts/generate-openapi.ts"
   },
   "dependencies": {
@@ -23,13 +26,13 @@
     "dotenv": "^16.4.5",
     "fastify": "^4.26.2",
     "kysely": "^0.27.3",
-    "pg": "^8.11.5"
+    "pg": "^8.11.5",
+    "tsx": "^4.7.2"
   },
   "devDependencies": {
     "@local-market/typescript-config": "workspace:*",
     "@types/node": "^26.1.1",
     "@types/pg": "^8.11.5",
-    "tsx": "^4.7.2",
     "typescript": "7.0.2"
   }
 }

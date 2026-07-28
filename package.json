@@ -15,13 +15,15 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "typecheck:version": "tsc --version",
-    "db:migrate": "pnpm --filter api db:migrate",
-    "db:rollback": "pnpm --filter api db:rollback",
-    "db:status": "pnpm --filter api db:status",
-    "db:seed": "pnpm --filter api db:seed",
-    "api:openapi": "pnpm --filter api generate-openapi",
-    "api:client:generate": "pnpm --filter api-client generate",
-    "api:client:check": "pnpm --filter api-client check-generated"
+    "db:migration:create": "pnpm --filter @local-market/api db:migration:create",
+    "db:migrate": "pnpm --filter @local-market/api db:migrate",
+    "db:rollback": "pnpm --filter @local-market/api db:rollback",
+    "db:status": "pnpm --filter @local-market/api db:status",
+    "db:seed": "pnpm --filter @local-market/api db:seed",
+    "db:reset": "pnpm --filter @local-market/api db:reset",
+    "api:openapi": "pnpm --filter @local-market/api generate-openapi",
+    "api:client:generate": "pnpm --filter @local-market/api-client generate",
+    "api:client:check": "pnpm --filter @local-market/api-client check-generated"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
