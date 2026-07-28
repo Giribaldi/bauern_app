@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { EnvironmentValidationError, parseApiPort, parseDatabaseEnvironment } from './env'
+import {
+  EnvironmentValidationError,
+  parseApiEnvironment,
+  parseApiPort,
+  parseDatabaseEnvironment,
+} from './env'
 
 describe('parseDatabaseEnvironment', () => {
   it('throws EnvironmentValidationError when DATABASE_URL is missing', () => {
@@ -262,5 +267,160 @@ describe('parseApiPort', () => {
     expect(result).toHaveProperty('apiPort', 8080)
     expect(Object.keys(result)).toEqual(['apiPort'])
     expect(typeof result.apiPort).toBe('number')
+  })
+})
+
+describe('parseApiEnvironment', () => {
+  it('parses a completely valid environment', () => {
+    const validEnv = {
+      DATABASE_URL: 'postgres://user:pass@localhost:5432/mydb',
+      API_PORT: '3000',
+    }
+    const result = parseApiEnvironment(validEnv)
+    expect(result).toEqual({
+      databaseUrl: 'postgres://user:pass@localhost:5432/mydb',
+      apiPort: 3000,
+    })
+  })
+
+  it('returns exact shape containing only databaseUrl and apiPort', () => {
+    const validEnv = {
+      DATABASE_URL: 'postgres://user:pass@localhost:5432/mydb',
+      API_PORT: '3000',
+    }
+    const result = parseApiEnvironment(validEnv)
+    expect(Object.keys(result)).toEqual(['databaseUrl', 'apiPort'])
+    expect(result).toHaveProperty('databaseUrl')
+    expect(result).toHaveProperty('apiPort')
+  })
+
+  it('ensures databaseUrl is a string', () => {
+    const validEnv = {
+      DATABASE_URL: 'postgres://user:pass@localhost:5432/mydb',
+      API_PORT: '3000',
+    }
+    const result = parseApiEnvironment(validEnv)
+    expect(typeof result.databaseUrl).toBe('string')
+  })
+
+  it('ensures apiPort is a number', () => {
+    const validEnv = {
+      DATABASE_URL: 'postgres://user:pass@localhost:5432/mydb',
+      API_PORT: '3000',
+    }
+    const result = parseApiEnvironment(validEnv)
+    expect(typeof result.apiPort).toBe('number')
+  })
+
+  it('normalizes exterior spaces of both variables', () => {
+    const rawEnv = {
+      DATABASE_URL: '  postgres://user:pass@localhost:5432/mydb  ',
+      API_PORT: '  8080  ',
+    }
+    const result = parseApiEnvironment(rawEnv)
+    expect(result).toEqual({
+      databaseUrl: 'postgres://user:pass@localhost:5432/mydb',
+      apiPort: 8080,
+    })
+  })
+
+  it('accepts postgres: protocol', () => {
+    const result = parseApiEnvironment({
+      DATABASE_URL: 'postgres://user:pass@localhost:5432/mydb',
+      API_PORT: '3000',
+    })
+    expect(result.databaseUrl).toBe('postgres://user:pass@localhost:5432/mydb')
+  })
+
+  it('accepts postgresql: protocol', () => {
+    const result = parseApiEnvironment({
+      DATABASE_URL: 'postgresql://user:pass@localhost:5432/mydb',
+      API_PORT: '3000',
+    })
+    expect(result.databaseUrl).toBe('postgresql://user:pass@localhost:5432/mydb')
+  })
+
+  it('propagates DATABASE_URL error when API_PORT is valid', () => {
+    const envWithMissingDb = { API_PORT: '3000' }
+    expect(() => parseApiEnvironment(envWithMissingDb)).toThrow(EnvironmentValidationError)
+    try {
+      parseApiEnvironment(envWithMissingDb)
+    } catch (error) {
+      expect(error).toBeInstanceOf(EnvironmentValidationError)
+      expect((error as Error).message).toBe('DATABASE_URL variable is missing.')
+    }
+  })
+
+  it('propagates API_PORT error when DATABASE_URL is valid', () => {
+    const envWithInvalidPort = {
+      DATABASE_URL: 'postgres://user:pass@localhost:5432/mydb',
+      API_PORT: 'invalid_port',
+    }
+    expect(() => parseApiEnvironment(envWithInvalidPort)).toThrow(EnvironmentValidationError)
+    try {
+      parseApiEnvironment(envWithInvalidPort)
+    } catch (error) {
+      expect(error).toBeInstanceOf(EnvironmentValidationError)
+      expect((error as Error).message).toBe('API_PORT must be a valid integer format.')
+    }
+  })
+
+  it('evaluates DATABASE_URL first when both variables are invalid', () => {
+    const doubleInvalidEnv = {
+      DATABASE_URL: 'not-a-valid-url',
+      API_PORT: 'not-a-valid-port',
+    }
+    expect(() => parseApiEnvironment(doubleInvalidEnv)).toThrow(EnvironmentValidationError)
+    try {
+      parseApiEnvironment(doubleInvalidEnv)
+    } catch (error) {
+      expect(error).toBeInstanceOf(EnvironmentValidationError)
+      expect((error as Error).message).toBe('DATABASE_URL is not a valid URL.')
+    }
+  })
+
+  it('ensures no sensitive or raw values are leaked in error messages', () => {
+    const sensitiveDbUrl = 'http://admin:secret123@db.example.com:5432/private_db'
+    const rawInvalidPort = '999999'
+
+    try {
+      parseApiEnvironment({ DATABASE_URL: sensitiveDbUrl, API_PORT: '3000' })
+    } catch (error) {
+      expect(error).toBeInstanceOf(EnvironmentValidationError)
+      expect((error as Error).message).not.toContain(sensitiveDbUrl)
+      expect((error as Error).message).not.toContain('secret123')
+    }
+
+    try {
+      parseApiEnvironment({
+        DATABASE_URL: 'postgres://user:pass@localhost:5432/mydb',
+        API_PORT: rawInvalidPort,
+      })
+    } catch (error) {
+      expect(error).toBeInstanceOf(EnvironmentValidationError)
+      expect((error as Error).message).not.toContain(rawInvalidPort)
+    }
+  })
+
+  it('does not mutate the provided environment object', () => {
+    const inputEnv = Object.freeze({
+      DATABASE_URL: '  postgres://user:pass@localhost:5432/mydb  ',
+      API_PORT: '  3000  ',
+    })
+    const copy = { ...inputEnv }
+    parseApiEnvironment(copy)
+    expect(copy).toEqual(inputEnv)
+  })
+
+  it('has no dependency on real process.env', () => {
+    const isolatedEnv = {
+      DATABASE_URL: 'postgres://isolated:secret@127.0.0.1:5432/isolated_db',
+      API_PORT: '8080',
+    }
+    const result = parseApiEnvironment(isolatedEnv)
+    expect(result).toEqual({
+      databaseUrl: 'postgres://isolated:secret@127.0.0.1:5432/isolated_db',
+      apiPort: 8080,
+    })
   })
 })

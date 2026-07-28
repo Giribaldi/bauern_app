@@ -11,6 +11,21 @@ Principes de gouvernance :
 - Une tâche échouée ou partiellement validée ne permet pas de poursuivre comme si elle avait réussi.
 - Aucune valeur secrète (mot de passe, jeton, URL de connexion complète) ne doit être inscrite dans ce registre.
 
+## Conception des prompts Gemini
+
+Les futurs prompts destinés à Gemini doivent rester complets mais compacts afin de limiter les omissions :
+
+- viser généralement 80 à 120 lignes et une seule micro-tâche ;
+- renvoyer à `AGENTS.md` au lieu d'en recopier les règles ;
+- faire lire uniquement les sections pertinentes de `phase-2.md` ;
+- conserver cinq blocs principaux : objectif, périmètre des fichiers, contrat et tests, commandes, rapport ;
+- fournir une seule commande ESLint correcte via `@local-market/eslint-runtime` ;
+- utiliser les tests source ciblés comme référence pour leur nombre et signaler séparément les doublons éventuels sous `dist` ;
+- n'imposer qu'un seul passage global final pour une tâche normale ;
+- réserver les doubles validations globales, empreintes SHA-256 et procédures détaillées aux diagnostics ou corrections qui les nécessitent réellement ;
+- en cas d'échec, demander simplement l'arrêt immédiat, l'absence de correction hors périmètre et le rapport de la commande et de l'erreur exactes ;
+- mettre à jour ce registre avec le résultat réel après les validations, puis vérifier son formatage et l'état Git final.
+
 ## Point de reprise de référence
 
 - Phase 1 validée.
@@ -116,6 +131,54 @@ Principes de gouvernance :
 - Version TypeScript observée : `Version 7.0.2`.
 - `process.env`, `dotenv`, Fastify et Kysely ne sont toujours pas intégrés.
 
+### 2.1.4 — Composer et tester le parseur pur de configuration API regroupant DATABASE_URL et API_PORT
+
+- **Statut** : NON VALIDÉE
+- Motif du rejet : Procédure de validation non conforme : absence du passage global préliminaire distinct avant modification du registre, absence des contrôles d'artefacts finaux (`git ls-files`), incohérence du nombre de tests inscrit dans le registre pour le workspace API, et formulation prématurément élargie de la tâche suivante. Aucun défaut de code n'a été identifié dans l'implémentation.
+- Fichiers modifiés lors de 2.1.4 :
+  - `apps/api/src/config/env.ts`
+  - `apps/api/src/config/env.test.ts`
+  - `phase-2-avancement.md`
+- Implémentation réalisée pendant 2.1.4 :
+  - Exportation de l'interface `ApiEnvironment` (étend `DatabaseEnvironment` et `ApiPortEnvironment`).
+  - Parseur pur `parseApiEnvironment(environment: NodeJS.ProcessEnv): ApiEnvironment`.
+  - Composition des parseurs existants `parseDatabaseEnvironment` et `parseApiPort` sans aucune duplication de logique de validation.
+  - Ordre d'évaluation déterministe : `DATABASE_URL` puis `API_PORT`.
+  - Forme de retour exacte : `{ databaseUrl: string, apiPort: number }`.
+  - Propagation directe des erreurs `EnvironmentValidationError` sans masquage ni inclusion de valeurs brutes ou sensibles.
+  - Non-mutation de l'objet d'environnement fourni.
+  - Conservation des 26 tests existants et ajout de 13 tests Vitest dédiés (total 39 tests dans `env.test.ts`).
+
+### 2.1.4a — Corriger la traçabilité et revalider la composition pure de la configuration API
+
+- **Statut** : VALIDÉE
+- Fichiers modifiés pendant 2.1.4a :
+  - `phase-2-avancement.md` (`env.ts` et `env.test.ts` sont restés bit à bit inchangés, confirmés par SHA-256 identiques).
+- Empreintes SHA-256 conservées :
+  - `apps/api/src/config/env.ts` : `e63c7e0cf21fbb64c867838c1a27184ba97c4c67c0815fcb0e2bb5290083dbd7`
+  - `apps/api/src/config/env.test.ts` : `2d96505543de726fd15e0869e39bdb046d7d8af5bacd598dd1348a08fe04a0cb`
+- Revalidation documentaire et ciblée réussie :
+  - Prettier check ciblé sur `env.ts` et `env.test.ts` (réussi).
+  - Lint ESLint ciblé via l'environnement isolé `@local-market/eslint-runtime` (0 erreur, 0 avertissement).
+  - Typecheck ciblé sur `@local-market/api` (réussi).
+  - Vitest sur fichier source ciblé `src/config/env.test.ts` : 1 fichier de test, 39 tests passés (9 `parseDatabaseEnvironment`, 17 `parseApiPort`, 13 `parseApiEnvironment`).
+  - Vitest sur workspace `@local-market/api` : 4 fichiers de test, 80 tests passés (39 source `src/config/env.test.ts`, 39 compilés `dist/config/env.test.js`, 1 source `src/index.test.ts`, 1 compilé `dist/index.test.js`).
+  - Build ciblé `@local-market/api` (réussi).
+- Passages globaux distincts exécutés :
+  - Premier passage global préliminaire exécuté avant toute modification du registre (réussi).
+  - Second passage global final exécuté après mise à jour du registre.
+  - Version TypeScript observée sur les deux passages : `Version 7.0.2`.
+- Contrôles d'artefacts exécutés :
+  - `git ls-files ':(glob)**/dist/**'` : aucun artefact suivi.
+  - `git ls-files ':(glob)**/.output/**'` : aucun artefact suivi.
+  - `git ls-files ':(glob)**/.tanstack/**'` : aucun artefact suivi.
+- Avertissements observés :
+  - Avertissement Prettier pour `prettier.config.js` sans `"type": "module"`.
+  - Avertissement pnpm pour les scripts de build ignorés (`esbuild@0.28.1`).
+  - Avertissement Turborepo update (v2.10.5 ≫ v2.10.7).
+  - Doublons de tests compilés observés sous `dist` dans Vitest (distingues des 39 tests source).
+- `process.env`, `dotenv`, Fastify et Kysely ne sont toujours pas intégrés.
+
 ## Constats et décisions établis
 
 ### Faits et constats validés
@@ -142,7 +205,7 @@ Principes de gouvernance :
 
 ## Micro-tâche suivante immédiate
 
-### 2.1.4 — Composer et tester le parseur pur de configuration API regroupant DATABASE_URL et API_PORT.
+### 2.1.5 — Créer et tester l’adaptateur de chargement de la configuration API depuis process.env.
 
 Statut : À FAIRE
 

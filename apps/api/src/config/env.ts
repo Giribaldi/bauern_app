@@ -69,3 +69,15 @@ export const parseApiPort = (environment: NodeJS.ProcessEnv): ApiPortEnvironment
     apiPort: portNumber,
   }
 }
+
+export interface ApiEnvironment extends DatabaseEnvironment, ApiPortEnvironment {}
+
+export const parseApiEnvironment = (environment: NodeJS.ProcessEnv): ApiEnvironment => {
+  const databaseEnv = parseDatabaseEnvironment(environment)
+  const apiPortEnv = parseApiPort(environment)
+
+  return {
+    databaseUrl: databaseEnv.databaseUrl,
+    apiPort: apiPortEnv.apiPort,
+  }
+}
