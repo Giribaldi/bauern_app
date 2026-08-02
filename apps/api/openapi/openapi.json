@@ -1,0 +1,796 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Local Market API",
+    "description": "API publique de découverte des exploitations et de leurs offres.",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": ["health"],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["ok"]
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "operationId": "getReadiness",
+        "tags": ["health"],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["ready"]
+                    },
+                    "database": {
+                      "type": "string",
+                      "enum": ["ok"]
+                    },
+                    "postgis": {
+                      "type": "string",
+                      "enum": ["ok"]
+                    }
+                  },
+                  "required": ["status", "database", "postgis"]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "format": "uri",
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": ["type", "title", "status", "code", "detail", "requestId", "errors"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/farms/nearby": {
+      "get": {
+        "operationId": "findNearbyFarms",
+        "tags": ["farms"],
+        "parameters": [
+          {
+            "schema": {
+              "minimum": -90,
+              "maximum": 90,
+              "type": "number"
+            },
+            "in": "query",
+            "name": "latitude",
+            "required": true
+          },
+          {
+            "schema": {
+              "minimum": -180,
+              "maximum": 180,
+              "type": "number"
+            },
+            "in": "query",
+            "name": "longitude",
+            "required": true
+          },
+          {
+            "schema": {
+              "exclusiveMinimum": 0,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            },
+            "in": "query",
+            "name": "radiusKm",
+            "required": false
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["fruit"]
+                },
+                {
+                  "type": "string",
+                  "enum": ["vegetable"]
+                },
+                {
+                  "type": "string",
+                  "enum": ["herb"]
+                },
+                {
+                  "type": "string",
+                  "enum": ["other"]
+                }
+              ]
+            },
+            "in": "query",
+            "name": "category",
+            "required": false
+          },
+          {
+            "schema": {
+              "default": true,
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "availableOnly",
+            "required": false
+          },
+          {
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "pattern": "^[0-9]+$",
+              "maxLength": 10,
+              "type": "string"
+            },
+            "in": "query",
+            "name": "cursor",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "farms": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "postalCode": {
+                            "type": "string"
+                          },
+                          "distanceKm": {
+                            "minimum": 0,
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "description",
+                          "city",
+                          "postalCode",
+                          "distanceKm"
+                        ]
+                      }
+                    },
+                    "nextCursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["farms", "nextCursor"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "format": "uri",
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": ["type", "title", "status", "code", "detail", "requestId", "errors"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "format": "uri",
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": ["type", "title", "status", "code", "detail", "requestId", "errors"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/farms/{farmId}": {
+      "get": {
+        "operationId": "getFarm",
+        "tags": ["farms"],
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "farmId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "publicEmail": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "publicPhone": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "location": {
+                      "type": "object",
+                      "properties": {
+                        "addressLine1": {
+                          "type": "string"
+                        },
+                        "addressLine2": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "postalCode": {
+                          "type": "string"
+                        },
+                        "city": {
+                          "type": "string"
+                        },
+                        "countryCode": {
+                          "type": "string"
+                        },
+                        "latitude": {
+                          "type": "number"
+                        },
+                        "longitude": {
+                          "type": "number"
+                        },
+                        "pickupInstructions": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "addressLine1",
+                        "addressLine2",
+                        "postalCode",
+                        "city",
+                        "countryCode",
+                        "latitude",
+                        "longitude",
+                        "pickupInstructions"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "slug",
+                    "description",
+                    "publicEmail",
+                    "publicPhone",
+                    "location"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "format": "uri",
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": ["type", "title", "status", "code", "detail", "requestId", "errors"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "format": "uri",
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": ["type", "title", "status", "code", "detail", "requestId", "errors"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/farms/{farmId}/listings": {
+      "get": {
+        "operationId": "getFarmListings",
+        "tags": ["farms", "listings"],
+        "parameters": [
+          {
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "in": "path",
+            "name": "farmId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "listings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "variety": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "unit": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": ["piece"]
+                              },
+                              {
+                                "type": "string",
+                                "enum": ["kilogram"]
+                              },
+                              {
+                                "type": "string",
+                                "enum": ["gram"]
+                              },
+                              {
+                                "type": "string",
+                                "enum": ["bunch"]
+                              },
+                              {
+                                "type": "string",
+                                "enum": ["box"]
+                              },
+                              {
+                                "type": "string",
+                                "enum": ["basket"]
+                              }
+                            ]
+                          },
+                          "unitQuantity": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "vatRate": {
+                            "type": "string"
+                          },
+                          "availableQuantity": {
+                            "type": "string"
+                          },
+                          "product": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "category": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": ["fruit"]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": ["vegetable"]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": ["herb"]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": ["other"]
+                                  }
+                                ]
+                              }
+                            },
+                            "required": ["id", "slug", "name", "category"]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "title",
+                          "description",
+                          "variety",
+                          "unit",
+                          "unitQuantity",
+                          "priceCents",
+                          "currency",
+                          "vatRate",
+                          "availableQuantity",
+                          "product"
+                        ]
+                      }
+                    }
+                  },
+                  "required": ["listings"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "format": "uri",
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": ["type", "title", "status", "code", "detail", "requestId", "errors"]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "format": "uri",
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "requestId": {
+                      "type": "string"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {}
+                    }
+                  },
+                  "required": ["type", "title", "status", "code", "detail", "requestId", "errors"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": "État du service"
+    },
+    {
+      "name": "farms",
+      "description": "Exploitations publiques"
+    },
+    {
+      "name": "listings",
+      "description": "Offres publiques"
+    }
+  ]
+}

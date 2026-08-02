@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "tsx src/index.ts",
     "test": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
@@ -16,7 +16,7 @@
     "db:status": "tsx src/database/migration-status.ts",
     "db:seed": "tsx src/database/seed.ts",
     "db:reset": "tsx src/database/reset.ts",
-    "generate-openapi": "tsx src/scripts/generate-openapi.ts"
+    "generate-openapi": "tsx src/scripts/generate-openapi.ts && prettier --write openapi/openapi.json"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",

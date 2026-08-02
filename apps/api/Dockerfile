@@ -13,4 +13,4 @@ RUN pnpm deploy --legacy --filter api --prod /prod/api
 FROM base AS runner
 WORKDIR /app
 COPY --from=builder /prod/api ./
-CMD ["node", "dist/index.js"]
+CMD ["./node_modules/.bin/tsx", "src/index.ts"]

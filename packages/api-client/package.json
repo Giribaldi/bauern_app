@@ -2,10 +2,13 @@
   "name": "@local-market/api-client",
   "version": "0.1.0",
   "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "generate": "openapi-typescript ../../apps/api/openapi.json -o src/generated/schema.ts",
+    "generate": "openapi-typescript ../../apps/api/openapi/openapi.json -o src/generated/schema.ts && prettier --write src/generated/schema.ts",
     "check-generated": "git diff --exit-code src/generated/schema.ts"
   },
   "dependencies": {

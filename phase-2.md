@@ -2,7 +2,7 @@
 
 ## Statut
 
-**État : à démarrer après validation complète de la Phase 1.**
+**État : TERMINÉE et validée le 2 août 2026.**
 
 ## Objectif de la phase
 

@@ -35,8 +35,9 @@ Les futurs prompts destinés à Gemini doivent rester complets mais compacts afi
 - pnpm : 10.30.3.
 - TypeScript : 7.0.2.
 - Validations de Phase 1 déjà acquises, sans en refaire un audit détaillé.
-- La configuration d'environnement, la connexion Kysely, le runner de migrations et la migration des extensions PostgreSQL sont validés.
-- Aucune table métier, seed, route `/ready` ou route `/v1/farms` n'est encore implémentée.
+- La configuration d'environnement, la connexion Kysely, le runner de migrations et toutes les migrations PostgreSQL/PostGIS sont validés.
+- La tranche métier Phase 2, le seed, les routes publiques, OpenAPI, le client généré et le storefront sont validés.
+- La Phase 2 est terminée depuis le 2 août 2026.
 
 ## Légende des statuts
 
@@ -259,6 +260,84 @@ Les futurs prompts destinés à Gemini doivent rester complets mais compacts afi
 - Validation globale réussie : formatage, lint, typecheck, tests et build.
 - TypeScript observé : `Version 7.0.2`.
 
+### 2.5 — Tables utilisateurs et exploitations
+
+- **Statut** : VALIDÉE
+- Migration autonome `2026-07-28T010000_create_users_and_farms.ts` ajoutée.
+- Tables `users`, `farms`, `farm_members` et `farm_locations` créées avec clés, contraintes, rôles, suppression en cascade et index utiles.
+- Position stockée en `geography(Point, 4326)` et index GiST `farm_locations_location_gist` créé.
+- Les hashes utilisateurs sont contraints au format Argon2id.
+
+### 2.6 — Catalogue, offres et lots de stock
+
+- **Statut** : VALIDÉE
+- Migration autonome `2026-07-28T020000_create_catalog_and_inventory.ts` ajoutée.
+- Tables `product_catalog`, `listings` et `inventory_batches` créées avec catégories, unités, prix entiers, décimaux `numeric`, contraintes de stock et index.
+- Les types Kysely internes ont été complétés sans être exposés au contrat HTTP.
+
+### 2.7 — Seed de développement
+
+- **Statut** : VALIDÉE
+- Seed transactionnel et idempotent créé avec deux agriculteurs, deux exploitations françaises, trois produits, cinq offres et trois lots.
+- Une offre inactive et une offre active sans stock sont présentes.
+- Deux exécutions successives conservent exactement les mêmes cardinalités.
+
+### 2.8 à 2.12 — Injection, readiness, PostGIS, routes publiques et erreurs
+
+- **Statut** : VALIDÉE
+- `buildApp()` et `startServer()` sont séparés ; le repository et la vérification de disponibilité sont injectés.
+- `/health` vérifie uniquement le processus HTTP.
+- `/ready` vérifie PostgreSQL et `postgis_version()` et normalise l'indisponibilité en `DATABASE_UNAVAILABLE` sans fuite de connexion.
+- `/v1/farms/nearby` utilise `ST_DWithin`, calcule et trie les distances en base, applique catégorie, disponibilité, rayon, limite et curseur sans N+1 ni doublon.
+- `/v1/farms/:farmId` et `/v1/farms/:farmId/listings` n'exposent que les données publiques.
+- Toutes les entrées et sorties HTTP utilisent TypeBox et le format de problème commun.
+- L'utilisation possible de l'index GiST a été confirmée par `EXPLAIN (FORMAT JSON)` sur PostgreSQL/PostGIS réel.
+
+### 2.13 — OpenAPI
+
+- **Statut** : VALIDÉE
+- Document produit depuis les schémas Fastify/TypeBox dans `apps/api/openapi/openapi.json`.
+- Génération et formatage disponibles via `pnpm api:openapi`.
+- Deux générations consécutives ont produit les mêmes empreintes SHA-256.
+
+### 2.14 — Client TypeScript généré
+
+- **Statut** : VALIDÉE
+- Types générés sous `packages/api-client/src/generated/schema.ts` sans type Kysely.
+- Constructeur à base URL configurable, headers, réponses inférées et erreurs API/réseau normalisées ajoutés.
+- Prix conservés en centimes entiers et valeurs `numeric` exposées comme chaînes décimales, stratégie documentée dans `packages/api-client/README.md`.
+- `pnpm api:client:generate` et `pnpm api:client:check` réussis.
+
+### 2.15 — Intégration storefront
+
+- **Statut** : VALIDÉE
+- Page de recherche ajoutée avec latitude, longitude, rayon et position lyonnaise de test.
+- États chargement, erreur et absence de résultat gérés.
+- Affichage des exploitations, distances, fiche publique et produits stockés via le client généré.
+
+### 2.16 — Tests d'intégration Phase 2
+
+- **Statut** : VALIDÉE
+- Test réel sur base temporaire : base vide, trois migrations, statut, extensions, index spatial, double seed, lecture, distance, tri, rayon, ferme inactive, localisation privée, catégorie, disponibilité et confidentialité.
+- Rollback de la migration catalogue/stock, statut en attente, remigration et nouveau seed validés.
+- Routes `/ready` et `/v1/farms/nearby` validées avec le repository PostgreSQL réel.
+- Test d'intégration ciblé : 1 test passé.
+- Passage global sans drapeau d'intégration : API 130 tests passés et 2 ignorés, client 6 tests passés avec doublons compilés, storefront 4 tests passés.
+
+### 2.17 — Audit final Phase 2
+
+- **Statut** : VALIDÉE
+- TypeScript observé : `Version 7.0.2`.
+- Installation `pnpm install --frozen-lockfile` terminée avec lockfile inchangé.
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test` et `pnpm build` réussis.
+- OpenAPI et client régénérés deux fois de manière déterministe.
+- `docker compose config` et la liste des services validés.
+- Images `api`, `worker`, `storefront` et `admin` construites avec le builder classique, Buildx étant absent.
+- Migrations conteneurisées et double seed conteneurisé réussis.
+- Tous les services Compose démarrés ; API, PostgreSQL, storefront et admin observés sains, worker démarré.
+- Smoke tests réussis sur `/health`, `/ready`, `/v1/farms/nearby`, `/v1/farms/:farmId/listings` et le storefront.
+- Aucun artefact `dist`, `.output` ou `.tanstack` n'est suivi par Git.
+
 ## Constats et décisions établis
 
 ### Faits et constats validés
@@ -278,21 +357,25 @@ Les futurs prompts destinés à Gemini doivent rester complets mais compacts afi
 
 ### Décisions pour la prochaine implémentation
 
-- La prochaine micro-tâche crée les tables utilisateurs et exploitations par migrations autonomes.
-- Elle ne doit pas encore introduire le catalogue, les offres, le stock, les routes HTTP ou l'interface.
+- Aucune tâche de Phase 3 n'est commencée.
+- Le panier, les réservations de stock, les commandes, les paiements et l'authentification restent hors du périmètre livré.
 
 ## Micro-tâche suivante immédiate
 
-### 2.5 — Créer les tables utilisateurs et exploitations
+### Phase 2 terminée
 
-- **Statut** : À FAIRE
-- Périmètre : `users`, `farms`, `farm_members` et `farm_locations`, avec contraintes et index spatial.
+- **Statut** : VALIDÉE
+- Aucune micro-tâche Phase 2 restante.
 
 ## Blocages et avertissements
 
 - Aucun blocage actuel.
 - Le plugin Docker Buildx est absent de l'hôte ; l'image API a été validée avec le builder Docker classique (`DOCKER_BUILDKIT=0`).
 - Le binaire `rg` n'était pas disponible dans le PATH standard lors du dernier audit et a été trouvé dans l'environnement VS Code.
+- `pnpm install --frozen-lockfile` a signalé un échec temporaire de récupération des métadonnées pnpm (`EAI_AGAIN`) mais a terminé avec le lockfile à jour et les dépendances déjà installées.
+- Prettier signale toujours que le `package.json` racine ne déclare pas `"type": "module"` pour `prettier.config.js`.
+- pnpm signale toujours le script de build ignoré de `esbuild@0.28.1` et les déploiements Docker signalent les peer dependencies TypeScript historiques d'Expo/Remix.
+- Le worker conserve l'avertissement Node historique `MODULE_TYPELESS_PACKAGE_JSON` ; il démarre normalement.
 - Ne jamais inscrire de valeur provenant de `.env` ou d'une URL de connexion.
 
 ## Règles de mise à jour

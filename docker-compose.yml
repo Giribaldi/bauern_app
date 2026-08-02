@@ -29,6 +29,7 @@ services:
       - '3000:3000'
     environment:
       DATABASE_URL: postgresql://local_market:password@postgres:5432/local_market
+      API_PORT: '3000'
     depends_on:
       postgres:
         condition: service_healthy
