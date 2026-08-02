@@ -4,5 +4,5 @@
     "jsx": "react-native",
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/**/*", "app/**/*"]
+  "include": ["src/**/*", "app/**/*", "env.d.ts"]
 }

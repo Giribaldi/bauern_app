@@ -8,10 +8,21 @@ import type { Database } from './database/database.types'
 import { installErrorHandler, ProblemSchema, problem } from './http/problem'
 import { registerFarmRoutes } from './modules/farms/farms.routes'
 import type { FarmsRepository } from './modules/farms/farms.types'
+import { registerAuthRoutes } from './modules/auth/auth.routes'
+import type { AuthService } from './modules/auth/auth.service'
+import { registerAdminRoutes } from './modules/admin/admin.routes'
+import type { AdminService } from './modules/admin/admin.service'
+import { registerCommerceRoutes } from './modules/commerce/commerce.routes'
+import type { CommerceService } from './modules/commerce/commerce.service'
 
 export interface AppDependencies {
   readonly checkReadiness: () => Promise<void>
   readonly farmsRepository: FarmsRepository
+  readonly authService?: AuthService
+  readonly adminService?: AdminService
+  readonly commerceService?: CommerceService
+  readonly secureCookies?: boolean
+  readonly corsOrigins?: readonly string[]
 }
 
 const HealthSchema = Type.Object({ status: Type.Literal('ok') })
@@ -27,9 +38,16 @@ export const verifyReadiness = async (database: Kysely<Database>): Promise<void>
 }
 
 export const buildApp = (dependencies: AppDependencies): FastifyInstance => {
-  const app = Fastify({ logger: false })
+  const app = Fastify({
+    logger: process.env.NODE_ENV === 'production',
+    bodyLimit: 1_048_576,
+    requestIdHeader: 'x-request-id',
+  })
 
-  void app.register(cors, { origin: '*' })
+  void app.register(cors, {
+    origin: [...(dependencies.corsOrigins ?? ['http://localhost:3001', 'http://localhost:3002'])],
+    credentials: true,
+  })
   void app.register(swagger, {
     openapi: {
       info: {
@@ -41,11 +59,24 @@ export const buildApp = (dependencies: AppDependencies): FastifyInstance => {
         { name: 'health', description: 'État du service' },
         { name: 'farms', description: 'Exploitations publiques' },
         { name: 'listings', description: 'Offres publiques' },
+        { name: 'auth', description: 'Authentification' },
+        { name: 'admin', description: 'Back-office' },
+        { name: 'carts', description: 'Paniers' },
+        { name: 'checkout', description: 'Paiement' },
+        { name: 'orders', description: 'Commandes' },
+        { name: 'webhooks', description: 'Webhooks signés' },
       ],
     },
   })
 
   installErrorHandler(app)
+  app.addHook('onSend', async (_request, reply, payload) => {
+    reply.header('x-content-type-options', 'nosniff')
+    reply.header('x-frame-options', 'DENY')
+    reply.header('referrer-policy', 'no-referrer')
+    reply.header('content-security-policy', "default-src 'none'; frame-ancestors 'none'")
+    return payload
+  })
 
   void app.register(async (routes) => {
     routes.get(
@@ -91,6 +122,9 @@ export const buildApp = (dependencies: AppDependencies): FastifyInstance => {
     )
 
     registerFarmRoutes(routes, dependencies.farmsRepository)
+    registerAuthRoutes(routes, dependencies.authService, dependencies.secureCookies ?? true)
+    registerAdminRoutes(routes, dependencies.adminService)
+    registerCommerceRoutes(routes, dependencies.commerceService)
   })
   return app
 }

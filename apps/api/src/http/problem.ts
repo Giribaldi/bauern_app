@@ -1,5 +1,6 @@
 import { Type, type Static } from '@sinclair/typebox'
 import type { FastifyInstance } from 'fastify'
+import { DomainError } from './domain-error'
 
 export const ProblemSchema = Type.Object({
   type: Type.String({ format: 'uri' }),
@@ -32,6 +33,11 @@ export const problem = (
 
 export const installErrorHandler = (app: FastifyInstance): void => {
   app.setErrorHandler((error, request, reply) => {
+    if (error instanceof DomainError) {
+      return reply
+        .status(error.status)
+        .send(problem(request.id, error.status, error.code, 'Opération refusée', error.message))
+    }
     if (error.validation !== undefined) {
       return reply
         .status(400)

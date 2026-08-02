@@ -33,6 +33,8 @@ chrome-user-data
 **/.output/
 **/.tanstack/
 **/node_modules/
+playwright-report/
+test-results/
 
 packages/react-devtools-core/dist
 packages/react-devtools-extensions/chrome/build

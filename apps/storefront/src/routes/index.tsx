@@ -1,6 +1,6 @@
 import { createApiClient } from '@local-market/api-client'
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
   loadFarmDetails,
   searchNearbyFarms,
@@ -15,6 +15,7 @@ const api = createApiClient({
 })
 
 function Home() {
+  const [hydrated, setHydrated] = useState(false)
   const [latitude, setLatitude] = useState('45.764')
   const [longitude, setLongitude] = useState('4.8357')
   const [radiusKm, setRadiusKm] = useState('20')
@@ -23,6 +24,24 @@ function Home() {
   const [loading, setLoading] = useState(false)
   const [details, setDetails] = useState<FarmDetails>()
   const [detailsLoading, setDetailsLoading] = useState(false)
+  const [cartId, setCartId] = useState<string>()
+  const [cart, setCart] = useState<{
+    items: { id: string; title: string; quantity: string; totalCents: number }[]
+    totalCents: number
+  }>()
+  const [guestEmail, setGuestEmail] = useState('client@example.test')
+  const [trackingToken, setTrackingToken] = useState('')
+  const [order, setOrder] = useState<{
+    reference: string
+    status: string
+    farmName: string
+    totalCents: number
+  }>()
+
+  useEffect(() => {
+    setHydrated(true)
+    setTrackingToken(sessionStorage.getItem('local-market-guest-token') ?? '')
+  }, [])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -56,6 +75,52 @@ function Home() {
       )
     } finally {
       setDetailsLoading(false)
+    }
+  }
+
+  const addToCart = async (listingId: string) => {
+    try {
+      let id = cartId
+      if (id === undefined) {
+        const created = await api.request<{ cartId: string }>('/v1/carts', { method: 'POST' })
+        id = created.cartId
+        setCartId(id)
+      }
+      setCart(
+        await api.request(`/v1/carts/${id}/items`, {
+          method: 'POST',
+          body: { listingId, quantity: '1' },
+        })
+      )
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "L'ajout au panier a échoué.")
+    }
+  }
+
+  const checkout = async () => {
+    if (cartId === undefined) return
+    try {
+      const result = await api.request<{ checkoutUrl: string; guestToken: string }>(
+        '/v1/checkout',
+        {
+          method: 'POST',
+          headers: { 'idempotency-key': crypto.randomUUID() },
+          body: { cartId, email: guestEmail },
+        }
+      )
+      sessionStorage.setItem('local-market-guest-token', result.guestToken)
+      setTrackingToken(result.guestToken)
+      window.location.assign(result.checkoutUrl)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Le paiement a échoué.')
+    }
+  }
+
+  const track = async () => {
+    try {
+      setOrder(await api.request(`/v1/guest-orders/${trackingToken}`))
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Commande introuvable.')
     }
   }
 
@@ -104,7 +169,7 @@ function Home() {
             onChange={(event) => setRadiusKm(event.target.value)}
           />
         </label>
-        <button type="submit" disabled={loading} style={{ gridColumn: '1 / -1' }}>
+        <button type="submit" disabled={!hydrated || loading} style={{ gridColumn: '1 / -1' }}>
           {loading ? 'Recherche…' : 'Rechercher'}
         </button>
       </form>
@@ -144,12 +209,64 @@ function Home() {
                 <li key={listing.id}>
                   {listing.title} — {(listing.priceCents / 100).toFixed(2)} {listing.currency} —{' '}
                   {listing.availableQuantity} disponible(s)
+                  <button
+                    type="button"
+                    onClick={() => void addToCart(listing.id)}
+                    disabled={Number(listing.availableQuantity) <= 0}
+                  >
+                    Ajouter au panier
+                  </button>
                 </li>
               ))}
             </ul>
           )}
         </section>
       )}
+      <section>
+        <h2>Panier</h2>
+        {cart === undefined || cart.items.length === 0 ? (
+          <p>Votre panier est vide.</p>
+        ) : (
+          <>
+            <ul>
+              {cart.items.map((item) => (
+                <li key={item.id}>
+                  {item.title} × {item.quantity} — {(item.totalCents / 100).toFixed(2)} €
+                </li>
+              ))}
+            </ul>
+            <strong>Total : {(cart.totalCents / 100).toFixed(2)} €</strong>
+            <label>
+              E-mail de suivi
+              <input
+                type="email"
+                value={guestEmail}
+                onChange={(event) => setGuestEmail(event.target.value)}
+              />
+            </label>
+            <button type="button" onClick={() => void checkout()}>
+              Payer avec Stripe
+            </button>
+          </>
+        )}
+      </section>
+      <section>
+        <h2>Suivre une commande</h2>
+        <input
+          aria-label="Jeton de suivi"
+          value={trackingToken}
+          onChange={(event) => setTrackingToken(event.target.value)}
+        />
+        <button type="button" onClick={() => void track()}>
+          Consulter
+        </button>
+        {order !== undefined && (
+          <p>
+            {order.reference} · {order.farmName} · {order.status} ·{' '}
+            {(order.totalCents / 100).toFixed(2)} €
+          </p>
+        )}
+      </section>
     </main>
   )
 }

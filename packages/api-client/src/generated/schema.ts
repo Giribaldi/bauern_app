@@ -19,6 +19,70 @@ export interface paths {
   '/v1/farms/{farmId}/listings': {
     get: operations['getFarmListings']
   }
+  '/v1/auth/login': {
+    post: operations['login']
+  }
+  '/v1/auth/session': {
+    get: operations['getSession']
+  }
+  '/v1/auth/logout': {
+    post: operations['logout']
+  }
+  '/v1/admin/farms': {
+    get: operations['getAdminFarms']
+  }
+  '/v1/admin/farms/{farmId}': {
+    get: operations['getAdminFarm']
+    patch: operations['updateAdminFarm']
+  }
+  '/v1/admin/farms/{farmId}/listings': {
+    get: operations['getAdminListings']
+    post: operations['createAdminListing']
+  }
+  '/v1/admin/farms/{farmId}/listings/{listingId}': {
+    get: operations['getAdminListing']
+    patch: operations['updateAdminListing']
+  }
+  '/v1/admin/farms/{farmId}/inventory': {
+    get: operations['getAdminInventory']
+  }
+  '/v1/admin/farms/{farmId}/inventory/movements': {
+    post: operations['createStockMovement']
+  }
+  '/v1/admin/farms/{farmId}/orders': {
+    get: operations['getAdminOrders']
+  }
+  '/v1/admin/farms/{farmId}/orders/{orderId}': {
+    patch: operations['updateAdminOrder']
+  }
+  '/v1/carts': {
+    post: operations['createCart']
+  }
+  '/v1/carts/{cartId}': {
+    get: operations['getCart']
+  }
+  '/v1/carts/{cartId}/items': {
+    post: operations['addCartItem']
+  }
+  '/v1/carts/{cartId}/items/{itemId}': {
+    delete: operations['deleteCartItem']
+    patch: operations['updateCartItem']
+  }
+  '/v1/checkout': {
+    post: operations['checkout']
+  }
+  '/v1/guest-orders/{token}': {
+    get: operations['getGuestOrder']
+  }
+  '/v1/order-claims/request': {
+    post: operations['requestOrderClaim']
+  }
+  '/v1/order-claims/confirm': {
+    post: operations['confirmOrderClaim']
+  }
+  '/v1/webhooks/stripe': {
+    post: operations['stripeWebhook']
+  }
 }
 
 export type webhooks = Record<string, never>
@@ -271,6 +335,455 @@ export interface operations {
             errors: unknown[]
           }
         }
+      }
+    }
+  }
+  login: {
+    requestBody: {
+      content: {
+        'application/json': {
+          /** Format: email */
+          email: string
+          password: string
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: {
+          'application/json': {
+            /** Format: uuid */
+            userId: string
+            /** Format: email */
+            email: string
+            displayName: string
+            /** Format: date-time */
+            expiresAt: string
+          }
+        }
+      }
+      /** @description Default Response */
+      401: {
+        content: {
+          'application/json': {
+            /** Format: uri */
+            type: string
+            title: string
+            status: number
+            code: string
+            detail: string
+            requestId: string
+            errors: unknown[]
+          }
+        }
+      }
+      /** @description Default Response */
+      429: {
+        content: {
+          'application/json': {
+            /** Format: uri */
+            type: string
+            title: string
+            status: number
+            code: string
+            detail: string
+            requestId: string
+            errors: unknown[]
+          }
+        }
+      }
+    }
+  }
+  getSession: {
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: {
+          'application/json': {
+            /** Format: uuid */
+            userId: string
+            /** Format: email */
+            email: string
+            displayName: string
+            /** Format: date-time */
+            expiresAt: string
+          }
+        }
+      }
+      /** @description Default Response */
+      401: {
+        content: {
+          'application/json': {
+            /** Format: uri */
+            type: string
+            title: string
+            status: number
+            code: string
+            detail: string
+            requestId: string
+            errors: unknown[]
+          }
+        }
+      }
+    }
+  }
+  logout: {
+    responses: {
+      /** @description Default Response */
+      204: {
+        content: never
+      }
+    }
+  }
+  getAdminFarms: {
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  getAdminFarm: {
+    parameters: {
+      path: {
+        farmId: string
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  updateAdminFarm: {
+    parameters: {
+      path: {
+        farmId: string
+      }
+    }
+    requestBody?: {
+      content: {
+        'application/json': {
+          name?: string
+          description?: string | null
+          publicEmail?: string | null
+          publicPhone?: string | null
+          isActive?: boolean
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  getAdminListings: {
+    parameters: {
+      path: {
+        farmId: string
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  createAdminListing: {
+    parameters: {
+      path: {
+        farmId: string
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** Format: uuid */
+          productCatalogId: string
+          title: string
+          description?: string | null
+          variety?: string | null
+          unit: 'piece' | 'kilogram' | 'gram' | 'bunch' | 'box' | 'basket'
+          unitQuantity: string
+          priceCents: number
+          vatRate: string
+          isActive?: boolean
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  getAdminListing: {
+    parameters: {
+      path: {
+        farmId: string
+        listingId: string
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  updateAdminListing: {
+    parameters: {
+      path: {
+        farmId: string
+        listingId: string
+      }
+    }
+    requestBody?: {
+      content: {
+        'application/json': {
+          title?: string
+          description?: string | null
+          variety?: string | null
+          priceCents?: number
+          vatRate?: string
+          isActive?: boolean
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  getAdminInventory: {
+    parameters: {
+      path: {
+        farmId: string
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  createStockMovement: {
+    parameters: {
+      path: {
+        farmId: string
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** Format: uuid */
+          inventoryBatchId: string
+          type: 'stock_added' | 'stock_corrected' | 'stock_lost' | 'stock_refunded'
+          quantity: string
+          reason?: string
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  getAdminOrders: {
+    parameters: {
+      path: {
+        farmId: string
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  updateAdminOrder: {
+    parameters: {
+      path: {
+        farmId: string
+        orderId: string
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          status: 'preparing' | 'ready_for_pickup' | 'completed' | 'cancelled' | 'refunded'
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  createCart: {
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  getCart: {
+    parameters: {
+      path: {
+        cartId: string
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  addCartItem: {
+    parameters: {
+      path: {
+        cartId: string
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          /** Format: uuid */
+          listingId: string
+          quantity: string
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  deleteCartItem: {
+    parameters: {
+      path: {
+        cartId: string
+        itemId: string
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  updateCartItem: {
+    parameters: {
+      path: {
+        cartId: string
+        itemId: string
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          quantity: string
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  checkout: {
+    parameters: {
+      header: {
+        'idempotency-key': string
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': {
+          cartId: string
+          /** Format: email */
+          email: string
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  getGuestOrder: {
+    parameters: {
+      path: {
+        token: string
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  requestOrderClaim: {
+    requestBody: {
+      content: {
+        'application/json': {
+          /** Format: email */
+          email: string
+          reference: string
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  confirmOrderClaim: {
+    requestBody: {
+      content: {
+        'application/json': {
+          token: string
+        }
+      }
+    }
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
+      }
+    }
+  }
+  stripeWebhook: {
+    responses: {
+      /** @description Default Response */
+      200: {
+        content: never
       }
     }
   }

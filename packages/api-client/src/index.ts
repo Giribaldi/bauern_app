@@ -9,6 +9,12 @@ export interface ApiClientOptions {
   readonly fetch?: typeof globalThis.fetch
 }
 
+export interface ApiRequestOptions {
+  readonly method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  readonly body?: unknown
+  readonly headers?: Record<string, string>
+}
+
 export class ApiClientError extends Error {
   readonly status: number
   readonly code: string
@@ -53,9 +59,30 @@ const normalizeNetworkError = (error: unknown): ApiClientError => {
 
 export const createApiClient = ({ baseUrl, headers, fetch }: ApiClientOptions) => {
   const client = createClient<paths>({ baseUrl, headers, fetch })
+  const fetchImplementation = fetch ?? globalThis.fetch
 
   return {
     raw: client,
+    async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+      try {
+        const response = await fetchImplementation(`${baseUrl.replace(/\/$/, '')}${path}`, {
+          method: options.method ?? 'GET',
+          credentials: 'include',
+          headers: {
+            ...(options.body === undefined ? {} : { 'content-type': 'application/json' }),
+            ...options.headers,
+          },
+          body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        })
+        if (response.status === 204) return undefined as T
+        const value: unknown = await response.json()
+        if (!response.ok) throw normalizeApiError(response.status, value)
+        return value as T
+      } catch (error) {
+        if (error instanceof ApiClientError) throw error
+        throw normalizeNetworkError(error)
+      }
+    },
     async findNearbyFarms(
       query: operations['findNearbyFarms']['parameters']['query']
     ): Promise<operations['findNearbyFarms']['responses'][200]['content']['application/json']> {

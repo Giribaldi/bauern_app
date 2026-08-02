@@ -23,9 +23,11 @@
     "db:reset": "pnpm --filter @local-market/api db:reset",
     "api:openapi": "pnpm --filter @local-market/api generate-openapi",
     "api:client:generate": "pnpm --filter @local-market/api-client generate",
-    "api:client:check": "pnpm --filter @local-market/api-client check-generated"
+    "api:client:check": "pnpm --filter @local-market/api-client check-generated",
+    "e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/node": "^26.1.1",
     "prettier": "^3.9.5",
     "turbo": "^2.10.5",

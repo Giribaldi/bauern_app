@@ -15,6 +15,10 @@ import {
   rollbackLastMigration,
 } from './migrator'
 import { seedDatabase } from './seed'
+import { createAuthService } from '../modules/auth/auth.service'
+import { AdminService } from '../modules/admin/admin.service'
+import { CommerceService } from '../modules/commerce/commerce.service'
+import { FakePaymentProvider } from '../modules/commerce/payment'
 
 const runIntegrationTests = process.env.RUN_DATABASE_INTEGRATION === '1'
 const describeDatabase = runIntegrationTests ? describe : describe.skip
@@ -68,6 +72,7 @@ describeDatabase('Phase 2 PostgreSQL/PostGIS integration', () => {
       },
       { migrationName: '2026-07-28T010000_create_users_and_farms', status: 'Success' },
       { migrationName: '2026-07-28T020000_create_catalog_and_inventory', status: 'Success' },
+      { migrationName: '2026-08-02T000000_create_commerce_mvp', status: 'Success' },
     ])
 
     const extensions = await sql<{ extname: string }>`
@@ -77,7 +82,7 @@ describeDatabase('Phase 2 PostgreSQL/PostGIS integration', () => {
     expect(extensions.rows.map(({ extname }) => extname)).toEqual(['pgcrypto', 'postgis'])
 
     const status = await getMigrationStatus(migrator)
-    expect(status).toHaveLength(3)
+    expect(status).toHaveLength(4)
     expect(status.every(({ executedAt }) => executedAt instanceof Date)).toBe(true)
 
     const spatialIndex = await sql<{ indexdef: string }>`
@@ -102,6 +107,101 @@ describeDatabase('Phase 2 PostgreSQL/PostGIS integration', () => {
     `.execute(database)
     expect(countsAfterFirstSeed.rows[0]).toEqual({ farms: 2, listings: 5, batches: 3 })
     expect(countsAfterSecondSeed.rows[0]).toEqual(countsAfterFirstSeed.rows[0])
+
+    const auth = createAuthService(database)
+    await expect(
+      auth.login('alice.seed@local-market.test', 'incorrect-password', '127.0.0.1')
+    ).resolves.toBe('invalid')
+    const login = await auth.login('alice.seed@local-market.test', 'Maraicher-2026!', '127.0.0.2')
+    expect(login).not.toBe('invalid')
+    expect(login).not.toBe('rate_limited')
+    if (login === 'invalid' || login === 'rate_limited')
+      throw new Error('Development login failed.')
+    await expect(auth.session(login.token)).resolves.toEqual(
+      expect.objectContaining({ email: 'alice.seed@local-market.test' })
+    )
+    const admin = new AdminService(database, auth)
+    await expect(admin.farms(login.token)).resolves.toEqual([
+      expect.objectContaining({ slug: 'ferme-des-pres' }),
+    ])
+    await expect(
+      admin.updateFarm(login.token, '20000000-0000-4000-8000-000000000002', { name: 'Interdit' })
+    ).rejects.toMatchObject({ code: 'FARM_ACCESS_DENIED' })
+    await expect(
+      admin.moveStock(login.token, '20000000-0000-4000-8000-000000000001', {
+        inventoryBatchId: '60000000-0000-4000-8000-000000000001',
+        type: 'stock_corrected',
+        quantity: '-1',
+      })
+    ).rejects.toMatchObject({ code: 'STOCK_REASON_REQUIRED' })
+    const inventory = await admin.moveStock(login.token, '20000000-0000-4000-8000-000000000001', {
+      inventoryBatchId: '60000000-0000-4000-8000-000000000001',
+      type: 'stock_added',
+      quantity: '2',
+      reason: 'Récolte du jour',
+    })
+    expect(inventory.movements[0]).toEqual(
+      expect.objectContaining({ type: 'stock_added', quantity: '2.000' })
+    )
+
+    const payment = new FakePaymentProvider()
+    const commerce = new CommerceService(database, payment, 'http://storefront.test')
+    const cart = await commerce.createCart()
+    await commerce.addItem(cart.cartId, '50000000-0000-4000-8000-000000000001', '1')
+    await expect(
+      commerce.addItem(cart.cartId, '50000000-0000-4000-8000-000000000003', '1')
+    ).rejects.toMatchObject({ code: 'MULTI_FARM_CART_NOT_ALLOWED' })
+    const checkout = await commerce.checkout(
+      cart.cartId,
+      'guest@example.test',
+      'integration-checkout'
+    )
+    expect(checkout.checkoutUrl).toMatch(/^https:\/\/checkout\.stripe\.test\//)
+    expect(checkout.guestToken).toBeTypeOf('string')
+    await expect(commerce.guestOrder(checkout.guestToken ?? '')).resolves.toEqual(
+      expect.objectContaining({ status: 'pending_payment', totalCents: 450 })
+    )
+    const paymentRow = await database
+      .selectFrom('payments')
+      .select('provider_session_id')
+      .where('order_id', '=', checkout.orderId)
+      .executeTakeFirstOrThrow()
+    const event = JSON.stringify({
+      id: 'evt-integration-paid',
+      type: 'checkout.completed',
+      sessionId: paymentRow.provider_session_id,
+    })
+    await commerce.webhook(event, undefined)
+    await commerce.webhook(event, undefined)
+    await expect(commerce.guestOrder(checkout.guestToken ?? '')).resolves.toEqual(
+      expect.objectContaining({ status: 'paid' })
+    )
+    const soldMovements = await database
+      .selectFrom('stock_movements')
+      .select(({ fn }) => fn.countAll<number>().as('count'))
+      .where('type', '=', 'stock_sold')
+      .executeTakeFirstOrThrow()
+    expect(Number(soldMovements.count)).toBe(1)
+
+    await sql`update inventory_batches set available_quantity = 1, reserved_quantity = 0 where id = '60000000-0000-4000-8000-000000000002'`.execute(
+      database
+    )
+    const cartA = await commerce.createCart()
+    const cartB = await commerce.createCart()
+    await commerce.addItem(cartA.cartId, '50000000-0000-4000-8000-000000000002', '1')
+    await commerce.addItem(cartB.cartId, '50000000-0000-4000-8000-000000000002', '1')
+    const concurrent = await Promise.allSettled([
+      commerce.checkout(cartA.cartId, 'a@example.test', 'last-item-a'),
+      commerce.checkout(cartB.cartId, 'b@example.test', 'last-item-b'),
+    ])
+    expect(concurrent.filter(({ status }) => status === 'fulfilled')).toHaveLength(1)
+    const quantities = await database
+      .selectFrom('inventory_batches')
+      .select(['available_quantity', 'reserved_quantity'])
+      .where('id', '=', '60000000-0000-4000-8000-000000000002')
+      .executeTakeFirstOrThrow()
+    expect(Number(quantities.available_quantity)).toBeGreaterThanOrEqual(0)
+    expect(quantities.reserved_quantity).toBe('1.000')
 
     const repository = createFarmsRepository(database)
     const closeToLyon = await repository.findNearby({
@@ -240,6 +340,14 @@ describeDatabase('Phase 2 PostgreSQL/PostGIS integration', () => {
     `.execute(database)
     expect(JSON.stringify(plan.rows[0])).toContain('farm_locations_location_gist')
 
+    const commerceRollback = await rollbackLastMigration(migrator)
+    expect(commerceRollback.results?.[0]).toEqual(
+      expect.objectContaining({
+        migrationName: '2026-08-02T000000_create_commerce_mvp',
+        direction: 'Down',
+        status: 'Success',
+      })
+    )
     const rollback = await rollbackLastMigration(migrator)
     expect(rollback.results?.[0]).toEqual(
       expect.objectContaining({
@@ -249,9 +357,9 @@ describeDatabase('Phase 2 PostgreSQL/PostGIS integration', () => {
       })
     )
     const pendingStatus = await getMigrationStatus(migrator)
-    expect(pendingStatus.at(-1)?.executedAt).toBeUndefined()
+    expect(pendingStatus.slice(-2).every(({ executedAt }) => executedAt === undefined)).toBe(true)
     const remigration = await migrateToLatest(migrator)
-    expect(remigration.results?.[0]?.status).toBe('Success')
+    expect(remigration.results?.map(({ status }) => status)).toEqual(['Success', 'Success'])
     await seedDatabase(database)
   }, 60_000)
 })

@@ -26,20 +26,20 @@ const ids = {
   ],
 } as const
 
-// Seed accounts are deliberately not usable for authentication. The values keep
-// the required Argon2id storage format without introducing a shared password.
-const disabledArgon2idHash =
-  '$argon2id$v=19$m=65536,t=3,p=1$c2VlZC1hY2NvdW50LWRpc2FibGVk$bm90LWEtdmFsaWQtc2hhcmVkLXBhc3N3b3Jk'
+// Development-only password: Maraicher-2026! (documented in README, never for production).
+const developmentArgon2idHash =
+  '$argon2id$v=19$m=65536,t=3,p=1$bG9jYWwtbWFya2V0LXNlZWQ=$guxeey79rS2RG65oJ2kH5VeX1YiJKUnI6TSnWXB65sA='
 
 export const seedDatabase = async (database: Kysely<Database>): Promise<void> => {
   await database.transaction().execute(async (transaction) => {
     await sql`
       insert into users (id, email, password_hash, display_name, email_verified_at)
       values
-        (${ids.users[0]}, 'alice.seed@local-market.test', ${disabledArgon2idHash}, 'Alice Martin', now()),
-        (${ids.users[1]}, 'benoit.seed@local-market.test', ${disabledArgon2idHash}, 'Benoît Dubois', now())
+        (${ids.users[0]}, 'alice.seed@local-market.test', ${developmentArgon2idHash}, 'Alice Martin', now()),
+        (${ids.users[1]}, 'benoit.seed@local-market.test', ${developmentArgon2idHash}, 'Benoît Dubois', now())
       on conflict (id) do update set
         email = excluded.email,
+        password_hash = excluded.password_hash,
         display_name = excluded.display_name,
         updated_at = now()
     `.execute(transaction)
@@ -118,6 +118,15 @@ export const seedDatabase = async (database: Kysely<Database>): Promise<void> =>
         available_quantity = excluded.available_quantity,
         reserved_quantity = excluded.reserved_quantity,
         updated_at = now()
+    `.execute(transaction)
+
+    await sql`
+      insert into stock_movements (id, inventory_batch_id, farm_id, actor_user_id, type, quantity, reason)
+      values
+        ('70000000-0000-4000-8000-000000000001', ${ids.batches[0]}, ${ids.farms[0]}, ${ids.users[0]}, 'stock_added', 30, 'Stock initial de démonstration'),
+        ('70000000-0000-4000-8000-000000000002', ${ids.batches[1]}, ${ids.farms[0]}, ${ids.users[0]}, 'stock_added', 12, 'Stock initial de démonstration'),
+        ('70000000-0000-4000-8000-000000000003', ${ids.batches[2]}, ${ids.farms[1]}, ${ids.users[1]}, 'stock_added', 80, 'Stock initial de démonstration')
+      on conflict (id) do nothing
     `.execute(transaction)
   })
 }

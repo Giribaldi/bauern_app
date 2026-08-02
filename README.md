@@ -2,9 +2,22 @@
 
 Marketplace locale de fruits et légumes permettant aux agriculteurs de publier leurs produits et aux clients de commander sans créer de compte, avec retrait direct à la ferme.
 
+## Développement Phase 3
+
+```bash
+docker compose up -d postgres mailpit
+pnpm db:migrate
+pnpm db:seed
+pnpm dev
+```
+
+Compte de démonstration uniquement local : `alice.seed@local-market.test` / `Maraicher-2026!`. Mailpit est accessible sur `http://localhost:8025`.
+
+Les tests PostgreSQL/PostGIS réels utilisent `RUN_DATABASE_INTEGRATION=1`. Les E2E utilisent `pnpm e2e` avec le storefront sur le port 3001 et l’admin sur le port 3002. Voir [la documentation de production](docs/production.md) pour le déploiement, les secrets, les sauvegardes et la restauration.
+
 ## État du projet
 
-Le projet est actuellement dans sa phase de fondation.
+Le MVP de Phase 3 couvre l’authentification producteur, le stock auditable, la commande invitée, le paiement, le worker, le storefront, l’admin et Expo.
 
 La Phase 1 comprend :
 
